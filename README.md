@@ -1,62 +1,30 @@
-## Base
+# Minecraft Server Control
 
-/tp 392 61 297
+## What this is
+Self-hosted Flask dashboard to control a running Minecraft server over RCON. It wraps common admin tasks (teleport, give items, run kits, quick gamerule toggles, whitelist/op, weather/time, locate villages) behind a web UI and a small REST API.
 
-## villages
+## Why I built it
+- Make everyday admin chores fast without typing long commands in-game.
+- Give non-technical friends a safe, focused control panel instead of full console access.
+- Centralize common presets (kits, locations) so they are repeatable and shareable.
+- Runable in a container alongside the itzg/minecraft-server image with minimal setup.
 
-ṭ/tp -1360 70 637
-/tp -3777 63 3823
+## High-level architecture
+- Flask app (this repo) exposes UI + JSON endpoints.
+- RCON client (mcrcon library) reuses a single connection to the Minecraft server.
+- SQLite stores saved locations; JSON files store kits/config seeds.
+- Docker Compose can run the web app and mount persistent data at `/app/data`.
 
-# ice are
-/tp 427 85 -39
+## Quick start
+1) Set environment in `.env` (example when the server is reachable on the host bridge):
+	- `RCON_HOST=172.17.0.1`
+	- `RCON_PORT=25575`
+	- `RCON_PASSWORD=<your_rcon_password>`
+2) Bring up the web app:
+	- `docker compose up -d --force-recreate web`
+3) Open the dashboard at `http://localhost:5090`.
+4) Use `GET /api/test-connection` to confirm RCON connectivity.
 
-
-/locate structure minecraft:village_plains
-/locate structure minecraft:village_desert
-/locate structure minecraft:village_savanna
-/locate structure minecraft:village_taiga
-/locate structure minecraft:village_snowy
-
-
-## give torch 
-
-/give .onlinecamp84 minecraft:torch 64
-
-/give .onlinecamp84 minecraft:diamond_pickaxe
-/give .onlinecamp84 minecraft:diamond_axe
-/give .onlinecamp84 minecraft:golden_pickaxe
-/give .onlinecamp84 minecraft:golden_axe
-
-/give .onlinecamp84 minecraft:cooked_beef 64
-/give .onlinecamp84 minecraft:torch 256
-/give .onlinecamp84 minecraft:ender_pearl 16
-
-/give .onlinecamp84 minecraft:compass 1
-/give .onlinecamp84 minecraft:map 1
-/give .onlinecamp84 minecraft:spyglass 1
-/give .onlinecamp84 minecraft:shield 1
-/give .onlinecamp84 minecraft:totem_of_undying 1
-
-
-/give .onlinecamp84 minecraft:cooked_beef 64
-/give .onlinecamp84 minecraft:golden_carrot 64
-/give .onlinecamp84 minecraft:torch 256
-/give .onlinecamp84 minecraft:campfire 4
-/give .onlinecamp84 minecraft:water_bucket 2
-/give .onlinecamp84 minecraft:lava_bucket 1
-/give .onlinecamp84 minecraft:ender_pearl 16
-/give .onlinecamp84 minecraft:boat 1
-/give .onlinecamp84 minecraft:bed ocu
-/give .onlinecamp84 minecraft:chest 4
-
-/give .onlinecamp84 minecraft:coal 64
-/give .onlinecamp84 minecraft:raw_copper 64
-/give .onlinecamp84 minecraft:raw_iron 64
-/give .onlinecamp84 minecraft:raw_gold 64
-/give .onlinecamp84 minecraft:diamond 64
-
-
-
-Gave 64 [Emerald] to .OnlineCamp84
-> /give .OnlineCamp84 minecraft:emerald 64
-Gave 64 [Emerald] to .OnlineCamp84
+## Notes
+- Ensure your Minecraft server has `enable-rcon=true` and the password matches `.env`.
+- If you run both containers on a custom Docker network, set `RCON_HOST` to the Minecraft container name instead of the bridge IP.
