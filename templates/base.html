@@ -79,6 +79,7 @@
         .fade-in {
             animation: fadeIn 0.3s ease-out;
         }
+        .page-stack > * + * { margin-top: 1.75rem; }
         .glass {
             background: var(--card);
             backdrop-filter: blur(14px);
@@ -97,13 +98,13 @@
     repeating-linear-gradient(90deg, transparent 0, transparent 28px, rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 32px),
     #050b10;">
     <nav class="glass border-b border-green-500/40 shadow-xl sticky top-0 z-40">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-cube text-green-400 text-2xl md:text-3xl"></i>
                     <h1 class="text-xl md:text-2xl font-bold text-white">Minecraft Server Control</h1>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-4">
                     <a href="/" class="text-white hover:text-green-400 transition px-2 py-1 text-sm">
                         <i class="fas fa-home"></i><span class="hidden sm:inline ml-2">Dashboard</span>
                     </a>
@@ -148,7 +149,7 @@
         </div>
     </nav>
 
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-4 md:px-6 lg:px-8 py-10 page-stack">
         {% block content %}{% endblock %}
     </main>
 

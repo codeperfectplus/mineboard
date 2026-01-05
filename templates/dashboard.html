@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div id="pageShell" class="transition-all duration-300 lg:pl-64 space-y-4">
+<div id="pageShell" class="transition-all duration-300 lg:pl-64 space-y-6">
 <!-- Top Control Bar -->
 <div class="mb-3 space-y-3">
     <!-- Section Navigation -->
@@ -921,19 +921,41 @@
         return fd;
     }
 
-    function toggleQuickAccess() {
+    const QA_STORAGE_KEY_DASH = 'qaState-dashboard';
+
+    function setQuickAccessState(open) {
         const panel = document.getElementById('quickAccessNav');
         const shell = document.getElementById('pageShell');
         if (!panel || !shell) return;
-        
-        const isHidden = panel.classList.contains('hidden');
-        panel.classList.toggle('hidden');
-        
-        // Adjust padding on desktop only
-        if (window.innerWidth >= 1024) {
-            shell.classList.toggle('lg:pl-64', !isHidden);
-            shell.classList.toggle('lg:pl-6', isHidden);
+
+        if (open) {
+            panel.classList.remove('hidden', 'lg:hidden');
+            panel.classList.add('lg:block');
+            if (window.innerWidth >= 1024) {
+                shell.classList.add('lg:pl-64');
+                shell.classList.remove('lg:pl-6');
+            }
+        } else {
+            panel.classList.add('hidden', 'lg:hidden');
+            panel.classList.remove('lg:block');
+            if (window.innerWidth >= 1024) {
+                shell.classList.remove('lg:pl-64');
+                shell.classList.add('lg:pl-6');
+            }
         }
+        localStorage.setItem(QA_STORAGE_KEY_DASH, open ? 'open' : 'closed');
+    }
+
+    function toggleQuickAccess() {
+        const saved = localStorage.getItem(QA_STORAGE_KEY_DASH);
+        const currentlyOpen = saved ? saved === 'open' : true;
+        setQuickAccessState(!currentlyOpen);
+    }
+
+    function restoreQuickAccessState() {
+        const saved = localStorage.getItem(QA_STORAGE_KEY_DASH);
+        const shouldOpen = saved ? saved === 'open' : true;
+        setQuickAccessState(shouldOpen);
     }
 
     function setGamemode(mode) {
@@ -1031,6 +1053,7 @@
     }
 
     // Initial loads
+    restoreQuickAccessState();
     loadLocations();
 
     // Custom Command Form
