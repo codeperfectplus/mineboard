@@ -72,6 +72,9 @@
             --border: rgba(154, 197, 255, 0.35);
         }
         * { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; }
+        html { font-size: 16px; }
+        @media (min-width: 1920px) { html { font-size: 17px; } }
+        @media (min-width: 2560px) { html { font-size: 18px; } }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -80,6 +83,7 @@
             animation: fadeIn 0.3s ease-out;
         }
         .page-stack > * + * { margin-top: 1.75rem; }
+        @media (min-width: 1536px) { .page-stack > * + * { margin-top: 2.25rem; } }
         .glass {
             background: var(--card);
             backdrop-filter: blur(14px);
@@ -98,7 +102,7 @@
     repeating-linear-gradient(90deg, transparent 0, transparent 28px, rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 32px),
     #050b10;">
     <nav class="glass border-b border-green-500/40 shadow-xl sticky top-0 z-40">
-        <div class="container mx-auto px-4 py-4">
+        <div class="container mx-auto px-6 lg:px-12 xl:px-16 2xl:px-24 py-5">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-cube text-green-400 text-2xl md:text-3xl"></i>
@@ -149,7 +153,7 @@
         </div>
     </nav>
 
-    <main class="container mx-auto px-4 md:px-6 lg:px-8 py-10 page-stack">
+    <main class="container mx-auto px-6 lg:px-12 xl:px-16 2xl:px-24 py-12 page-stack">
         {% block content %}{% endblock %}
     </main>
 
