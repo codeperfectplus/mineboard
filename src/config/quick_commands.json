@@ -98,7 +98,7 @@
     "category_icon": "house-user",
     "border_color": "emerald",
     "text_color": "emerald",
-    "grid_cols": 3,
+    "grid_cols": 2,
     "commands": [
       {"id": "spawn_villager_farmer", "label": "Farmer", "icon": "seedling", "color": "green", "description": "Spawn a farmer villager"},
       {"id": "spawn_villager_librarian", "label": "Librarian", "icon": "book", "color": "indigo", "description": "Spawn a librarian villager"},

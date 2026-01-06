@@ -4,34 +4,41 @@
 <div id="pageShell" class="space-y-6">
     <!-- Quick Stats Bar -->
     <div class="mc-card section-grass p-4 grid-pattern">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="text-center">
+                <div class="block-icon mx-auto mb-2 rounded-lg bg-black/20 p-2 w-10 h-10 flex items-center justify-center border border-white/10" id="serverStatusIcon">
+                    <i class="fas fa-circle-notch fa-spin text-white"></i>
+                </div>
+                <div class="text-2xl font-bold text-white pixel-font" id="serverStatusText">...</div>
+                <div class="text-xs text-gray-100 font-bold uppercase tracking-wider">Server Status</div>
+            </div>
             <div class="text-center">
                 <div class="block-icon mx-auto mb-2">
                     <i class="fas fa-users text-emerald-400 text-xl"></i>
                 </div>
-                <div class="text-2xl font-bold text-white">{{ players|length }}</div>
-                <div class="text-xs text-gray-400">Players Online</div>
+                <div class="text-2xl font-bold text-white pixel-font">{{ players|length }}</div>
+                <div class="text-xs text-gray-100 font-bold uppercase tracking-wider">Players Online</div>
             </div>
             <div class="text-center">
                 <div class="block-icon mx-auto mb-2">
                     <i class="fas fa-map-marker-alt text-blue-400 text-xl"></i>
                 </div>
-                <div class="text-2xl font-bold text-white">{{ locations|length }}</div>
-                <div class="text-xs text-gray-400">Saved Locations</div>
+                <div class="text-2xl font-bold text-white pixel-font">{{ locations|length }}</div>
+                <div class="text-xs text-gray-100 font-bold uppercase tracking-wider">Saved Locations</div>
             </div>
             <div class="text-center">
                 <div class="block-icon mx-auto mb-2">
                     <i class="fas fa-box text-purple-400 text-xl"></i>
                 </div>
-                <div class="text-2xl font-bold text-white">{{ kits|length }}</div>
-                <div class="text-xs text-gray-400">Available Kits</div>
+                <div class="text-2xl font-bold text-white pixel-font">{{ kits|length }}</div>
+                <div class="text-xs text-gray-100 font-bold uppercase tracking-wider">Available Kits</div>
             </div>
-            <div class="text-center">
+            <div class="text-center hidden lg:block">
                 <div class="block-icon mx-auto mb-2">
                     <i class="fas fa-gift text-yellow-400 text-xl"></i>
                 </div>
-                <div class="text-2xl font-bold text-white">250+</div>
-                <div class="text-xs text-gray-400">Items</div>
+                <div class="text-2xl font-bold text-white pixel-font">250+</div>
+                <div class="text-xs text-gray-100 font-bold uppercase tracking-wider">Items</div>
             </div>
         </div>
     </div>
@@ -1059,6 +1066,33 @@
 
     // Initial loads
     loadLocations();
+    checkServerStatus();
+    setInterval(checkServerStatus, 30000); // Check every 30s
+
+    async function checkServerStatus() {
+        const iconContainer = document.getElementById('serverStatusIcon');
+        const textContainer = document.getElementById('serverStatusText');
+        
+        try {
+            const response = await fetch('/api/test-connection');
+            const data = await response.json();
+            
+            if (data.connected) {
+                iconContainer.innerHTML = '<i class="fas fa-signal text-emerald-400 text-xl"></i>';
+                iconContainer.className = 'block-icon mx-auto mb-2 rounded-lg bg-emerald-900/50 p-2 w-10 h-10 flex items-center justify-center border border-emerald-400/50';
+                textContainer.textContent = 'ONLINE';
+                textContainer.className = 'text-2xl font-bold text-white pixel-font';
+            } else {
+                iconContainer.innerHTML = '<i class="fas fa-plug text-red-500 text-xl"></i>';
+                iconContainer.className = 'block-icon mx-auto mb-2 rounded-lg bg-red-900/50 p-2 w-10 h-10 flex items-center justify-center border border-red-500/50';
+                textContainer.textContent = 'OFFLINE';
+                textContainer.className = 'text-2xl font-bold text-red-200 pixel-font';
+            }
+        } catch (error) {
+            iconContainer.innerHTML = '<i class="fas fa-question text-gray-400 text-xl"></i>';
+            textContainer.textContent = 'ERROR';
+        }
+    }
 
     // Custom Command Form
     document.getElementById('commandForm').addEventListener('submit', async (e) => {

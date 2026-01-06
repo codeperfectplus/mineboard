@@ -1,327 +1,303 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error Logs - Minecraft Control</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        .glass {
-            background: rgba(31, 41, 55, 0.7);
-            backdrop-filter: blur(10px);
-        }
-    </style>
-</head>
-<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 min-h-screen">
-    <!-- Navigation -->
-    <nav class="glass border-b border-gray-700 p-4 sticky top-0 z-50">
-        <div class="container mx-auto flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <a href="/" class="text-white hover:text-purple-400 transition">
-                    <i class="fas fa-home"></i> Dashboard
-                </a>
-                <a href="/diagnostics" class="text-white hover:text-purple-400 transition">
-                    <i class="fas fa-stethoscope"></i> Diagnostics
-                </a>
-                <span class="text-purple-400 font-bold">
-                    <i class="fas fa-exclamation-triangle"></i> Error Logs
-                </span>
-            </div>
-        </div>
-    </nav>
+{% extends "base.html" %}
 
-    <div class="container mx-auto max-w-7xl p-6">
-        <!-- Header -->
-        <div class="glass rounded-xl shadow-2xl p-6 border border-red-500/50 mb-6">
-            <div class="flex items-center justify-between flex-wrap gap-4">
-                <div>
-                    <h1 class="text-4xl font-bold text-white mb-2 flex items-center">
-                        <i class="fas fa-exclamation-triangle text-red-400 mr-3"></i>
-                        Error Logs
-                    </h1>
-                    <p class="text-gray-400">Track and analyze failed command executions</p>
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="loadErrorLogs()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition">
-                        <i class="fas fa-refresh mr-2"></i> Refresh
-                    </button>
-                    <button onclick="clearAllLogs()" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition">
-                        <i class="fas fa-trash mr-2"></i> Clear All
-                    </button>
-                </div>
-            </div>
-        </div>
+{% block content %}
+<div id="pageShell" class="space-y-6">
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div class="glass rounded-lg p-4 border border-red-500/30">
-                <div class="text-red-400 text-sm font-semibold mb-1">Total Errors</div>
-                <div class="text-3xl font-bold text-white" id="totalErrors">0</div>
+    <!-- Header -->
+    <div class="mc-card section-red p-6 grid-pattern">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+                    <div class="block-icon">
+                        <i class="fas fa-exclamation-triangle text-red-500"></i>
+                    </div>
+                    Error Logs
+                </h1>
+                <p class="text-gray-300 text-sm">Track and analyze failed command executions</p>
             </div>
-            <div class="glass rounded-lg p-4 border border-orange-500/30">
-                <div class="text-orange-400 text-sm font-semibold mb-1">Unique Commands</div>
-                <div class="text-3xl font-bold text-white" id="uniqueCommands">0</div>
-            </div>
-            <div class="glass rounded-lg p-4 border border-purple-500/30">
-                <div class="text-purple-400 text-sm font-semibold mb-1">Affected Players</div>
-                <div class="text-3xl font-bold text-white" id="affectedPlayers">0</div>
-            </div>
-            <div class="glass rounded-lg p-4 border border-blue-500/30">
-                <div class="text-blue-400 text-sm font-semibold mb-1">Last 24 Hours</div>
-                <div class="text-3xl font-bold text-white" id="recentErrors">0</div>
-            </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="glass rounded-xl shadow-2xl p-6 border border-gray-700 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                    <label class="text-gray-300 text-sm font-semibold mb-2 block">
-                        <i class="fas fa-search mr-2"></i>Search
-                    </label>
-                    <input type="text" id="searchFilter" placeholder="Search errors..." 
-                           class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50 focus:outline-none">
-                </div>
-                <div>
-                    <label class="text-gray-300 text-sm font-semibold mb-2 block">
-                        <i class="fas fa-filter mr-2"></i>Command Type
-                    </label>
-                    <select id="commandTypeFilter" class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50 focus:outline-none">
-                        <option value="">All Types</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-gray-300 text-sm font-semibold mb-2 block">
-                        <i class="fas fa-user mr-2"></i>Player
-                    </label>
-                    <select id="playerFilter" class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50 focus:outline-none">
-                        <option value="">All Players</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-gray-300 text-sm font-semibold mb-2 block">
-                        <i class="fas fa-hashtag mr-2"></i>Show
-                    </label>
-                    <select id="limitFilter" onchange="loadErrorLogs()" class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50 focus:outline-none">
-                        <option value="50">50 Logs</option>
-                        <option value="100">100 Logs</option>
-                        <option value="200">200 Logs</option>
-                        <option value="500">All Logs</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Error Logs Table -->
-        <div class="glass rounded-xl shadow-2xl border border-gray-700 overflow-hidden">
-            <div class="p-6 border-b border-gray-700">
-                <h2 class="text-xl font-bold text-white flex items-center">
-                    <i class="fas fa-list text-red-400 mr-2"></i>
-                    Error Details
-                    <span class="ml-auto text-sm text-gray-400" id="filteredCount"></span>
-                </h2>
-            </div>
-            <div id="errorLogsContainer" class="max-h-[600px] overflow-y-auto">
-                <p class="text-gray-400 text-center p-8">
-                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading error logs...
-                </p>
+            <div class="flex gap-3">
+                <button onclick="loadErrorLogs()" class="mc-button bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2 text-sm font-medium">
+                    <i class="fas fa-sync-alt mr-2"></i> Refresh
+                </button>
+                <button onclick="clearAllLogs()" class="mc-button bg-gradient-to-b from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-4 py-2 text-sm font-medium">
+                    <i class="fas fa-trash-alt mr-2"></i> Clear All
+                </button>
             </div>
         </div>
     </div>
 
-    <script>
-        let allLogs = [];
-        let displayedLogs = [];
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="mc-card p-4 bg-gradient-to-br from-red-900/50 to-red-800/30 border-red-500/30">
+            <div class="text-xs font-bold text-red-300 uppercase mb-2">Total Errors</div>
+            <div class="text-3xl font-bold text-white pixel-font" id="totalErrors">0</div>
+        </div>
+        <div class="mc-card p-4 bg-gradient-to-br from-orange-900/50 to-orange-800/30 border-orange-500/30">
+            <div class="text-xs font-bold text-orange-300 uppercase mb-2">Unique Commands</div>
+            <div class="text-3xl font-bold text-white pixel-font" id="uniqueCommands">0</div>
+        </div>
+        <div class="mc-card p-4 bg-gradient-to-br from-purple-900/50 to-purple-800/30 border-purple-500/30">
+            <div class="text-xs font-bold text-purple-300 uppercase mb-2">Affected Players</div>
+            <div class="text-3xl font-bold text-white pixel-font" id="affectedPlayers">0</div>
+        </div>
+        <div class="mc-card p-4 bg-gradient-to-br from-blue-900/50 to-blue-800/30 border-blue-500/30">
+            <div class="text-xs font-bold text-blue-300 uppercase mb-2">Last 24 Hours</div>
+            <div class="text-3xl font-bold text-white pixel-font" id="recentErrors">0</div>
+        </div>
+    </div>
 
-        async function loadErrorLogs() {
-            const limit = document.getElementById('limitFilter').value;
-            const logsContainer = document.getElementById('errorLogsContainer');
-            logsContainer.innerHTML = '<p class="text-gray-400 text-center p-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading error logs...</p>';
+    <!-- Filters -->
+    <div class="mc-card p-6 grid-pattern">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-gray-400 font-semibold mb-2 text-xs uppercase">
+                    <i class="fas fa-search mr-2"></i>Search
+                </label>
+                <input type="text" id="searchFilter" placeholder="Search errors..." 
+                       class="mc-input w-full text-sm">
+            </div>
+            <div>
+                <label class="block text-gray-400 font-semibold mb-2 text-xs uppercase">
+                    <i class="fas fa-filter mr-2"></i>Command Type
+                </label>
+                <select id="commandTypeFilter" class="mc-select w-full text-sm">
+                    <option value="">All Types</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-400 font-semibold mb-2 text-xs uppercase">
+                    <i class="fas fa-user mr-2"></i>Player
+                </label>
+                <select id="playerFilter" class="mc-select w-full text-sm">
+                    <option value="">All Players</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-400 font-semibold mb-2 text-xs uppercase">
+                    <i class="fas fa-hashtag mr-2"></i>Limit
+                </label>
+                <select id="limitFilter" onchange="loadErrorLogs()" class="mc-select w-full text-sm">
+                    <option value="50">50 Logs</option>
+                    <option value="100">100 Logs</option>
+                    <option value="200">200 Logs</option>
+                    <option value="500">All Logs</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Logs Table -->
+    <div class="mc-card p-0 overflow-hidden grid-pattern">
+        <div class="p-4 border-b border-white/5 bg-black/20 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-white flex items-center">
+                <i class="fas fa-list text-red-400 mr-2"></i>
+                Error Details
+            </h2>
+             <span class="text-xs text-gray-400 font-mono" id="filteredCount"></span>
+        </div>
+        <div id="errorLogsContainer" class="max-h-[600px] overflow-y-auto custom-scrollbar p-0">
+            <p class="text-gray-400 text-center p-8">
+                <i class="fas fa-spinner fa-spin mr-2"></i>Loading error logs...
+            </p>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allLogs = [];
+    let displayedLogs = [];
+
+    async function loadErrorLogs() {
+        const limit = document.getElementById('limitFilter').value;
+        const logsContainer = document.getElementById('errorLogsContainer');
+        logsContainer.innerHTML = '<p class="text-gray-400 text-center p-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading error logs...</p>';
+        
+        try {
+            const response = await fetch(`/api/error-logs?limit=${limit}`);
+            const data = await response.json();
             
-            try {
-                const response = await fetch(`/api/error-logs?limit=${limit}`);
-                const data = await response.json();
+            if (data.success && data.logs) {
+                allLogs = data.logs;
                 
-                if (data.success && data.logs) {
-                    allLogs = data.logs;
-                    
-                    // Remove duplicates based on command_type + error_message
-                    const seen = new Map();
-                    allLogs = allLogs.filter(log => {
-                        const key = `${log.command_type}:${log.error_message}`;
-                        if (seen.has(key)) {
-                            return false;
-                        }
-                        seen.set(key, true);
-                        return true;
-                    });
-                    
-                    updateStats();
-                    populateFilters();
-                    applyFilters();
-                } else {
-                    logsContainer.innerHTML = '<p class="text-green-400 text-center p-8"><i class="fas fa-check-circle mr-2"></i>No errors recorded!</p>';
-                }
-            } catch (error) {
-                logsContainer.innerHTML = `<p class="text-red-400 text-center p-8"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load: ${error.message}</p>`;
+                // Remove duplicates based on command_type + error_message
+                const seen = new Map();
+                allLogs = allLogs.filter(log => {
+                    const key = `${log.command_type}:${log.error_message}`;
+                    if (seen.has(key)) {
+                        return false;
+                    }
+                    seen.set(key, true);
+                    return true;
+                });
+                
+                updateStats();
+                populateFilters();
+                applyFilters();
+            } else {
+                logsContainer.innerHTML = '<p class="text-emerald-400 text-center p-8"><i class="fas fa-check-circle mr-2"></i>No errors recorded!</p>';
             }
+        } catch (error) {
+            logsContainer.innerHTML = `<p class="text-red-400 text-center p-8"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load: ${error.message}</p>`;
         }
+    }
 
-        function updateStats() {
-            const now = new Date();
-            const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    function updateStats() {
+        const now = new Date();
+        const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+        
+        const recentLogs = allLogs.filter(log => new Date(log.timestamp) > oneDayAgo);
+        const uniqueCommands = new Set(allLogs.map(log => log.command_type)).size;
+        const uniquePlayers = new Set(allLogs.filter(log => log.player).map(log => log.player)).size;
+        
+        document.getElementById('totalErrors').textContent = allLogs.length;
+        document.getElementById('uniqueCommands').textContent = uniqueCommands;
+        document.getElementById('affectedPlayers').textContent = uniquePlayers;
+        document.getElementById('recentErrors').textContent = recentLogs.length;
+    }
+
+    function populateFilters() {
+        // Populate command types
+        const commandTypes = [...new Set(allLogs.map(log => log.command_type))].sort();
+        const commandTypeFilter = document.getElementById('commandTypeFilter');
+        commandTypeFilter.innerHTML = '<option value="">All Types</option>';
+        commandTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            commandTypeFilter.appendChild(option);
+        });
+        
+        // Populate players
+        const players = [...new Set(allLogs.filter(log => log.player).map(log => log.player))].sort();
+        const playerFilter = document.getElementById('playerFilter');
+        playerFilter.innerHTML = '<option value="">All Players</option>';
+        players.forEach(player => {
+            const option = document.createElement('option');
+            option.value = player;
+            option.textContent = player;
+            playerFilter.appendChild(option);
+        });
+    }
+
+    function applyFilters() {
+        const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+        const commandType = document.getElementById('commandTypeFilter').value;
+        const player = document.getElementById('playerFilter').value;
+        
+        displayedLogs = allLogs.filter(log => {
+            const matchesSearch = !searchTerm || 
+                log.error_message.toLowerCase().includes(searchTerm) ||
+                log.command.toLowerCase().includes(searchTerm) ||
+                log.command_type.toLowerCase().includes(searchTerm);
             
-            const recentLogs = allLogs.filter(log => new Date(log.timestamp) > oneDayAgo);
-            const uniqueCommands = new Set(allLogs.map(log => log.command_type)).size;
-            const uniquePlayers = new Set(allLogs.filter(log => log.player).map(log => log.player)).size;
+            const matchesCommandType = !commandType || log.command_type === commandType;
+            const matchesPlayer = !player || log.player === player;
             
-            document.getElementById('totalErrors').textContent = allLogs.length;
-            document.getElementById('uniqueCommands').textContent = uniqueCommands;
-            document.getElementById('affectedPlayers').textContent = uniquePlayers;
-            document.getElementById('recentErrors').textContent = recentLogs.length;
+            return matchesSearch && matchesCommandType && matchesPlayer;
+        });
+        
+        renderLogs();
+    }
+
+    function renderLogs() {
+        const container = document.getElementById('errorLogsContainer');
+        document.getElementById('filteredCount').textContent = 
+            `Showing ${displayedLogs.length} of ${allLogs.length} errors`;
+        
+        if (displayedLogs.length === 0) {
+            container.innerHTML = '<p class="text-gray-400 text-center p-8">No matching errors found</p>';
+            return;
         }
-
-        function populateFilters() {
-            // Populate command types
-            const commandTypes = [...new Set(allLogs.map(log => log.command_type))].sort();
-            const commandTypeFilter = document.getElementById('commandTypeFilter');
-            commandTypeFilter.innerHTML = '<option value="">All Types</option>';
-            commandTypes.forEach(type => {
-                const option = document.createElement('option');
-                option.value = type;
-                option.textContent = type;
-                commandTypeFilter.appendChild(option);
-            });
+        
+        let html = '<div class="divide-y divide-white/5">';
+        displayedLogs.forEach((log, index) => {
+            const timestamp = new Date(log.timestamp).toLocaleString();
+            const isRecent = (new Date() - new Date(log.timestamp)) < 3600000; // 1 hour
             
-            // Populate players
-            const players = [...new Set(allLogs.filter(log => log.player).map(log => log.player))].sort();
-            const playerFilter = document.getElementById('playerFilter');
-            playerFilter.innerHTML = '<option value="">All Players</option>';
-            players.forEach(player => {
-                const option = document.createElement('option');
-                option.value = player;
-                option.textContent = player;
-                playerFilter.appendChild(option);
-            });
-        }
-
-        function applyFilters() {
-            const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
-            const commandType = document.getElementById('commandTypeFilter').value;
-            const player = document.getElementById('playerFilter').value;
-            
-            displayedLogs = allLogs.filter(log => {
-                const matchesSearch = !searchTerm || 
-                    log.error_message.toLowerCase().includes(searchTerm) ||
-                    log.command.toLowerCase().includes(searchTerm) ||
-                    log.command_type.toLowerCase().includes(searchTerm);
-                
-                const matchesCommandType = !commandType || log.command_type === commandType;
-                const matchesPlayer = !player || log.player === player;
-                
-                return matchesSearch && matchesCommandType && matchesPlayer;
-            });
-            
-            renderLogs();
-        }
-
-        function renderLogs() {
-            const container = document.getElementById('errorLogsContainer');
-            document.getElementById('filteredCount').textContent = 
-                `Showing ${displayedLogs.length} of ${allLogs.length} errors`;
-            
-            if (displayedLogs.length === 0) {
-                container.innerHTML = '<p class="text-gray-400 text-center p-8">No matching errors found</p>';
-                return;
-            }
-            
-            let html = '<div class="divide-y divide-gray-700">';
-            displayedLogs.forEach((log, index) => {
-                const timestamp = new Date(log.timestamp).toLocaleString();
-                const isRecent = (new Date() - new Date(log.timestamp)) < 3600000; // 1 hour
-                
-                html += `
-                    <div class="p-4 hover:bg-gray-800/50 transition ${isRecent ? 'bg-red-900/20' : ''}">
-                        <!-- Header -->
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-3 flex-wrap">
-                                    <span class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm font-bold">
-                                        ${log.command_type}
+            html += `
+                <div class="p-4 hover:bg-white/5 transition border-l-4 ${isRecent ? 'border-orange-500 bg-orange-900/10' : 'border-transparent'}">
+                    <!-- Header -->
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <span class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-xs font-bold border border-red-500/30 uppercase tracking-wider">
+                                    ${log.command_type}
+                                </span>
+                                ${log.player ? `
+                                    <span class="text-blue-300 text-sm flex items-center bg-blue-900/30 px-2 py-0.5 rounded border border-blue-500/30">
+                                        <i class="fas fa-user mr-1 text-xs"></i>${log.player}
                                     </span>
-                                    ${log.player ? `
-                                        <span class="text-blue-400 text-sm flex items-center">
-                                            <i class="fas fa-user mr-1"></i>${log.player}
-                                        </span>
-                                    ` : ''}
-                                    <span class="text-gray-500 text-sm flex items-center">
-                                        <i class="fas fa-route mr-1"></i>${log.endpoint}
-                                    </span>
-                                    ${isRecent ? '<span class="bg-orange-500/20 text-orange-300 px-2 py-1 rounded text-xs font-bold">NEW</span>' : ''}
-                                </div>
-                            </div>
-                            <span class="text-gray-500 text-xs whitespace-nowrap ml-4">
-                                <i class="fas fa-clock mr-1"></i>${timestamp}
-                            </span>
-                        </div>
-                        
-                        <!-- Error Message -->
-                        <div class="bg-red-900/20 border-l-4 border-red-500 p-3 rounded mb-3">
-                            <div class="text-red-300 text-sm font-mono leading-relaxed">
-                                ${escapeHtml(log.error_message)}
+                                ` : ''}
+                                <span class="text-gray-500 text-xs flex items-center font-mono">
+                                    <i class="fas fa-route mr-1"></i>${log.endpoint}
+                                </span>
+                                ${isRecent ? '<span class="bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded text-[10px] font-bold border border-orange-500/30 animate-pulse">NEW</span>' : ''}
                             </div>
                         </div>
-                        
-                        <!-- Command -->
-                        ${log.command !== 'N/A' ? `
-                            <div class="bg-black/30 p-3 rounded">
-                                <div class="text-gray-500 text-xs mb-1">Command:</div>
-                                <div class="text-gray-300 text-sm font-mono break-all">
-                                    ${escapeHtml(log.command)}
-                                </div>
-                            </div>
-                        ` : ''}
+                        <span class="text-gray-500 text-xs whitespace-nowrap ml-4 font-mono">
+                            <i class="fas fa-clock mr-1"></i>${timestamp}
+                        </span>
                     </div>
-                `;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
+                    
+                    <!-- Error Message -->
+                    <div class="bg-red-950/30 border border-red-900/50 p-3 rounded mb-2">
+                        <div class="text-red-300 text-sm font-mono leading-relaxed break-words">
+                            ${escapeHtml(log.error_message)}
+                        </div>
+                    </div>
+                    
+                    <!-- Command -->
+                    ${log.command !== 'N/A' ? `
+                        <div class="bg-black/50 p-2 rounded border border-white/5">
+                            <div class="text-gray-500 text-[10px] mb-1 uppercase tracking-wider">Failed Command:</div>
+                            <div class="text-gray-300 text-sm font-mono break-all pl-2 border-l-2 border-gray-600">
+                                ${escapeHtml(log.command)}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
-        async function clearAllLogs() {
-            if (!confirm('Are you sure you want to clear all error logs? This cannot be undone.')) {
-                return;
-            }
+    async function clearAllLogs() {
+        if (!confirm('Are you sure you want to clear all error logs? This cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/error-logs/clear', { method: 'POST' });
+            const data = await response.json();
             
-            try {
-                const response = await fetch('/api/error-logs/clear', { method: 'POST' });
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('All error logs cleared successfully!');
-                    loadErrorLogs();
-                } else {
-                    alert('Failed to clear logs: ' + (data.error || 'Unknown error'));
-                }
-            } catch (error) {
-                alert('Failed to clear logs: ' + error.message);
+            if (data.success) {
+                // Flash success
+                alert('All error logs cleared successfully!');
+                loadErrorLogs();
+            } else {
+                alert('Failed to clear logs: ' + (data.error || 'Unknown error'));
             }
+        } catch (error) {
+            alert('Failed to clear logs: ' + error.message);
         }
+    }
 
-        // Event listeners
-        document.getElementById('searchFilter').addEventListener('input', applyFilters);
-        document.getElementById('commandTypeFilter').addEventListener('change', applyFilters);
-        document.getElementById('playerFilter').addEventListener('change', applyFilters);
+    // Event listeners
+    document.getElementById('searchFilter').addEventListener('input', applyFilters);
+    document.getElementById('commandTypeFilter').addEventListener('change', applyFilters);
+    document.getElementById('playerFilter').addEventListener('change', applyFilters);
 
-        // Auto-load on page load
-        window.addEventListener('load', loadErrorLogs);
-    </script>
-</body>
-</html>
+    // Auto-load on page load
+    window.addEventListener('load', loadErrorLogs);
+</script>
+{% endblock %}
