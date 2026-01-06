@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, g
-from rcon_client import run_command, get_online_players
-from commands import ITEMS, VILLAGE_TYPES
+from src.rcon_client import run_command, get_online_players
+from src.commands import ITEMS, VILLAGE_TYPES
 from collections import OrderedDict
 import re
 import json

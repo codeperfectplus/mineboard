@@ -1,0 +1,51 @@
+services:
+  minecraft:
+    image: itzg/minecraft-server:latest
+    container_name: minecraft-server
+
+    ports:
+      - "${MINECRAFT_JAVA_PORT}:25565"
+      - "${MINECRAFT_BEDROCK_PORT}:19132/udp"
+      - "${MINECRAFT_RCON_PORT}:25575"
+
+    environment:
+      EULA: ${MINECRAFT_EULA}
+      TYPE: ${MINECRAFT_SERVER_TYPE}
+      VERSION: ${MINECRAFT_SERVER_VERSION}
+
+      MEMORY: ${MINECRAFT_MAX_MEMORY}
+
+      SERVER_NAME: ${MINECRAFT_SERVER_NAME}
+      MOTD: ${MINECRAFT_MOTD}
+      DIFFICULTY: ${MINECRAFT_DIFFICULTY}
+      MAX_PLAYERS: ${MINECRAFT_MAX_PLAYERS}
+      ONLINE_MODE: ${MINECRAFT_ONLINE_MODE}
+      ENABLE_RCON: "true"
+      RCON_PASSWORD: ${MINECRAFT_RCON_PASSWORD}
+      RCON_PORT: ${MINECRAFT_RCON_PORT}
+
+      # JVM performance tuning
+      JVM_OPTS: >
+        -Xms6G
+        -Xmx12G
+        -XX:+UseG1GC
+        -XX:+ParallelRefProcEnabled
+        -XX:MaxGCPauseMillis=150
+        -XX:+UnlockExperimentalVMOptions
+        -XX:+DisableExplicitGC
+        -XX:+AlwaysPreTouch
+        -XX:G1HeapRegionSize=16M
+        -XX:G1NewSizePercent=30
+        -XX:G1ReservePercent=20
+        -XX:InitiatingHeapOccupancyPercent=15
+
+      # Plugins: Geyser + Floodgate + Chunk Pre-Generator
+      PLUGINS: |
+        https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot
+        https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot
+        https://github.com/MilkBowl/Vault/releases/latest/download/Vault.jar
+
+    volumes:
+      - ${MINECRAFT_DATA_PATH}:/data
+
+    restart: unless-stopped
