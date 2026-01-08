@@ -1,4 +1,7 @@
 """API routes for AJAX endpoints."""
+import sys
+import os
+import platform
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from src.services.location_service import fetch_locations, upsert_location, delete_location
@@ -8,6 +11,7 @@ from src.services.player_service import (
     get_player_stats, get_player_inventory, 
     get_player_history, get_player_location
 )
+from src.services.config_service import get_rcon_config
 from src.rcon_client import run_command, get_online_players
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -25,20 +29,43 @@ def api_players():
 @login_required
 def test_connection():
     """Test RCON connection and return diagnostics."""
-    from rcon_client import RCON_HOST, RCON_PORT, RCON_PASSWORD
-    
+    cfg = get_rcon_config()
+
     result = run_command("list")
     
     diagnostics = {
-        "host": RCON_HOST,
-        "port": RCON_PORT,
-        "password_set": bool(RCON_PASSWORD and RCON_PASSWORD.strip()),
-        "password_length": len(RCON_PASSWORD) if RCON_PASSWORD else 0,
+        "host": cfg["host"],
+        "port": cfg["port"],
+        "password_set": bool(cfg["password"] and cfg["password"].strip()),
+        "password_length": len(cfg["password"]) if cfg.get("password") else 0,
+        "source": cfg.get("source"),
         "response": result,
-        "connected": not result.startswith("Error")
+        "connected": not str(result).startswith("Error")
     }
     
     return jsonify(diagnostics)
+
+
+@api_bp.route('/app-info')
+@login_required
+def app_info():
+    """Get application information."""
+    db_path = os.environ.get("DB_PATH", "/app/data/data.db")
+    db_size = 0
+    if os.path.exists(db_path):
+        db_size = os.path.getsize(db_path) / 1024  # KB
+    
+    info = {
+        "version": "2.0.0",
+        "environment": os.environ.get("ENVIRONMENT", "Docker"),
+        "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        "database": "SQLite",
+        "database_size_kb": round(db_size, 2),
+        "platform": platform.system(),
+        "framework": "Flask + Tailwind CSS"
+    }
+    
+    return jsonify(info)
 
 
 @api_bp.route('/locations', methods=['GET', 'POST'])

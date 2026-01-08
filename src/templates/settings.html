@@ -11,11 +11,11 @@
             </div>
             Server Settings
         </h1>
-        <p class="text-gray-400 text-sm mt-2">Manage RCON connection settings and test server connectivity.</p>
+        <p class="text-gray-400 text-sm mt-2">Manage RCON connection, server preferences, and system configuration.</p>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-6">
-        <!-- Left Column: Diag Tools -->
+        <!-- Left Column -->
         <div class="space-y-6">
             <!-- Connection Test -->
             <div class="mc-card p-6 grid-pattern">
@@ -34,22 +34,43 @@
                 </div>
             </div>
 
-            <!-- Recent Errors (Small Widget) -->
-            <div class="mc-card p-6 grid-pattern border-red-500/30">
+            <!-- Server Information -->
+            <div class="mc-card p-6 grid-pattern border-blue-500/30">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                        <i class="fas fa-exclamation-triangle text-red-500"></i>
-                        Recent Errors
+                        <i class="fas fa-server text-blue-400"></i>
+                        Server Information
                     </h2>
-                    <button onclick="loadErrorLogs()" class="text-xs text-blue-300 hover:text-white underline">Refresh</button>
+                    <button onclick="loadServerInfo()" class="text-xs text-blue-300 hover:text-white underline">Refresh</button>
                 </div>
-                <div id="errorLogs" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                    <p class="text-gray-400 text-sm">Loading...</p>
-                </div>
-                <div class="mt-4 text-center">
-                    <a href="/error-logs" class="text-sm text-blue-400 hover:text-blue-300">View Full Log History &rarr;</a>
+                <div id="serverInfo" class="space-y-3">
+                    <p class="text-gray-400 text-sm">Loading server details...</p>
                 </div>
             </div>
+
+            <!-- Quick Actions -->
+            {% if current_user.role == 'admin' %}
+            <div class="mc-card p-6 grid-pattern border-purple-500/30">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2 mb-4">
+                    <i class="fas fa-bolt text-purple-400"></i>
+                    Quick Actions
+                </h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <a href="{{ url_for('auth.manage_users') }}" class="mc-button bg-gradient-to-b from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white px-4 py-3 text-sm font-semibold text-center">
+                        <i class="fas fa-users mr-2"></i>Manage Users
+                    </a>
+                    <a href="/error-logs" class="mc-button bg-gradient-to-b from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-4 py-3 text-sm font-semibold text-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Error Logs
+                    </a>
+                    <button onclick="clearCache()" class="mc-button bg-gradient-to-b from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 text-white px-4 py-3 text-sm font-semibold">
+                        <i class="fas fa-trash-alt mr-2"></i>Clear Cache
+                    </button>
+                    <button onclick="exportSettings()" class="mc-button bg-gradient-to-b from-cyan-600 to-cyan-700 hover:from-cyan-500 hover:to-cyan-600 text-white px-4 py-3 text-sm font-semibold">
+                        <i class="fas fa-download mr-2"></i>Export Config
+                    </button>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Right Column -->
@@ -99,6 +120,22 @@
                         Only admins can update RCON connection settings.
                     </div>
                 {% endif %}
+            </div>
+
+            <!-- Application Info -->
+            <div class="mc-card p-6 section-dirt grid-pattern">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                        <div class="block-icon">
+                            <i class="fas fa-info-circle text-cyan-400"></i>
+                        </div>
+                        Application Info
+                    </h2>
+                    <button onclick="loadAppInfo()" class="text-xs text-blue-300 hover:text-white underline">Refresh</button>
+                </div>
+                <div id="appInfo" class="space-y-3 text-sm">
+                    <p class="text-gray-400 text-sm text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -180,46 +217,110 @@
         }
     }
 
-    async function loadErrorLogs(limit = 10) {
-        const logsDiv = document.getElementById('errorLogs');
-        logsDiv.innerHTML = '<p class="text-gray-400 text-sm text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p>';
+    async function loadServerInfo() {
+        const infoDiv = document.getElementById('serverInfo');
+        infoDiv.innerHTML = '<p class="text-gray-400 text-sm text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p>';
         
         try {
-            const response = await fetch(`/api/error-logs?limit=${limit}`);
+            const response = await fetch('/api/players');
             const data = await response.json();
             
-            if (data.success && data.logs && data.logs.length > 0) {
-                let html = '<div class="space-y-2">';
-                data.logs.forEach(log => {
-                    const timestamp = new Date(log.timestamp).toLocaleTimeString();
-                    html += `
-                        <div class="bg-black/20 border-l-2 border-red-500 p-2 rounded hover:bg-white/5 transition">
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-red-400 font-bold text-xs uppercase">${log.command_type}</span>
-                                <span class="text-gray-600 text-[10px] font-mono">${timestamp}</span>
-                            </div>
-                            <div class="text-gray-300 text-xs font-mono break-all line-clamp-2" title="${log.error_message}">
-                                ${log.error_message}
-                            </div>
-                        </div>
-                    `;
+            let html = '<div class="space-y-2">';
+            html += `<div class="bg-black/20 p-3 rounded-lg border border-white/5 flex justify-between items-center">
+                <span class="text-gray-400">Players Online</span>
+                <span class="text-emerald-400 font-bold text-lg">${data.count || 0}</span>
+            </div>`;
+            
+            if (data.players && data.players.length > 0) {
+                html += '<div class="bg-black/20 p-3 rounded-lg border border-white/5">';
+                html += '<p class="text-gray-400 text-xs mb-2">Active Players:</p>';
+                html += '<div class="flex flex-wrap gap-2">';
+                data.players.forEach(player => {
+                    html += `<span class="px-2 py-1 bg-emerald-600/20 text-emerald-300 rounded text-xs">${player}</span>`;
                 });
-                html += '</div>';
-                logsDiv.innerHTML = html;
-            } else {
-                logsDiv.innerHTML = '<div class="text-center py-4"><p class="text-emerald-400 text-sm"><i class="fas fa-check-circle mb-1 block text-xl"></i>No errors found</p></div>';
+                html += '</div></div>';
             }
+            html += '</div>';
+            infoDiv.innerHTML = html;
         } catch (error) {
-            logsDiv.innerHTML = `<p class="text-red-400 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load logs</p>`;
+            infoDiv.innerHTML = `<p class="text-red-400 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load server info</p>`;
         }
     }
 
-    // Auto-test on page load
+    async function loadAppInfo() {
+        const appInfoDiv = document.getElementById('appInfo');
+        appInfoDiv.innerHTML = '<p class="text-gray-400 text-sm text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p>';
+        
+        try {
+            const response = await fetch('/api/app-info');
+            const data = await response.json();
+            
+            let html = '<div class="space-y-3">';
+            html += `<div class="bg-black/20 p-3 rounded-lg border border-white/5 flex justify-between">
+                <span class="text-gray-400">Version</span>
+                <span class="text-white font-mono">${data.version}</span>
+            </div>`;
+            html += `<div class="bg-black/20 p-3 rounded-lg border border-white/5 flex justify-between">
+                <span class="text-gray-400">Environment</span>
+                <span class="text-white font-mono">${data.environment}</span>
+            </div>`;
+            html += `<div class="bg-black/20 p-3 rounded-lg border border-white/5 flex justify-between">
+                <span class="text-gray-400">Python</span>
+                <span class="text-white font-mono">${data.python_version}</span>
+            </div>`;
+            html += `<div class="bg-black/20 p-3 rounded-lg border border-white/5 flex justify-between">
+                <span class="text-gray-400">Database</span>
+                <span class="text-white font-mono">${data.database} (${data.database_size_kb} KB)</span>
+            </div>`;
+            html += `<div class="bg-black/20 p-3 rounded-lg border border-white/5 flex justify-between">
+                <span class="text-gray-400">Platform</span>
+                <span class="text-white font-mono">${data.platform}</span>
+            </div>`;
+            html += '</div>';
+            html += '<div class="mt-4 pt-4 border-t border-white/10">';
+            html += '<p class="text-xs text-gray-500 text-center">';
+            html += 'Minecraft Server Control Panel<br>';
+            html += `Built with ${data.framework}`;
+            html += '</p></div>';
+            appInfoDiv.innerHTML = html;
+        } catch (error) {
+            appInfoDiv.innerHTML = `<p class="text-red-400 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load app info</p>`;
+        }
+    }
+
+    function clearCache() {
+        if (confirm('Clear application cache? This will refresh all stored data.')) {
+            alert('Cache clearing feature coming soon!');
+        }
+    }
+
+    function exportSettings() {
+        const config = {
+            rcon: {
+                host: '{{ rcon_config.host }}',
+                port: {{ rcon_config.port }},
+                source: '{{ rcon_config.source }}'
+            },
+            exported: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'minecraft-server-config.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function loadErrorLogs(limit = 10) {
+        // Removed - error logs moved to dedicated page
+    }
+
+    // Auto-load on page load
     window.addEventListener('load', () => {
-        // Optional: Auto run test? Maybe just load logs. Dashboard usually loads data.
-        // Let's not auto-run heavy connection test, but we will load logs.
-        // testConnection(); 
-        loadErrorLogs();
+        loadServerInfo();
+        loadAppInfo();
     });
 </script>
 {% endblock %}

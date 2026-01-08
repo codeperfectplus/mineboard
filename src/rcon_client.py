@@ -1,16 +1,8 @@
 from mcrcon import MCRcon
-import os
 import socket
 import signal
 import threading
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
-
-RCON_HOST = os.getenv("RCON_HOST", "localhost")
-RCON_PORT = int(os.getenv("RCON_PORT", "25575"))
-RCON_PASSWORD = os.getenv("RCON_PASSWORD", "")
+from src.services.config_service import get_rcon_config
 
 # Monkey-patch signal.signal to avoid threading issues
 original_signal = signal.signal
@@ -28,7 +20,8 @@ _client_lock = threading.Lock()
 
 def _connect_new():
     """Create and connect a new RCON client."""
-    client = MCRcon(RCON_HOST, RCON_PASSWORD, port=RCON_PORT)
+    cfg = get_rcon_config()
+    client = MCRcon(cfg["host"], cfg["password"], port=cfg["port"])
     client.connect()
     return client
 
@@ -52,7 +45,7 @@ def run_command(command):
     except Exception as e:
         error_msg = str(e)
         if "Authentication failed" in error_msg or "Login failed" in error_msg:
-            return "Error: Authentication failed. Check RCON password in .env file."
+            return "Error: Authentication failed. Check RCON password in settings or .env file."
 
         # Attempt one reconnect+retry on a broken pipe/socket closure
         try:
@@ -66,6 +59,18 @@ def run_command(command):
                 return _client.command(command)
         except Exception:
             return f"Error: {error_msg}"
+
+
+def reset_rcon_client():
+    """Drop the cached client so new config is picked up on next command."""
+    global _client
+    with _client_lock:
+        try:
+            if _client:
+                _client.disconnect()
+        except Exception:
+            pass
+        _client = None
 
 def is_rcon_error(response):
     """Check if RCON response indicates an error."""

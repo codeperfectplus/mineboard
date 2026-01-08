@@ -29,6 +29,18 @@ def close_db(exception):
 def init_db():
     """Initialize database tables."""
     db = get_db()
+
+    # RCON configuration table (single row)
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS rcon_config (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            host TEXT,
+            port INTEGER,
+            password TEXT
+        )
+        """
+    )
     
     # Create locations table
     db.execute(
