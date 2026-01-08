@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users - Minecraft Server Control{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-white pixel-font">User Management</h1>
+        <a href="{{ url_for('dashboard') }}" class="mc-button bg-gray-700 text-white px-4 py-2 text-sm">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="bg-blue-500/20 border border-blue-500 text-blue-100 px-4 py-2 rounded mb-4">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Create User Form -->
+    <div class="mc-card p-6">
+        <h2 class="text-lg font-bold text-white mb-4">Create New User</h2>
+        <form method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <input type="hidden" name="action" value="create">
+            
+            <div class="md:col-span-1">
+                <label class="block text-gray-300 text-xs uppercase mb-1">Username</label>
+                <input type="text" name="username" required 
+                       class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
+            </div>
+            
+            <div class="md:col-span-1">
+                <label class="block text-gray-300 text-xs uppercase mb-1">Password</label>
+                <input type="password" name="password" required 
+                       class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
+            </div>
+            
+            <div class="md:col-span-1">
+                <label class="block text-gray-300 text-xs uppercase mb-1">Role</label>
+                <select name="role" class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            
+            <div class="md:col-span-1">
+                <button type="submit" class="mc-button w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 text-sm">
+                    <i class="fas fa-plus mr-2"></i>Create User
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- User List -->
+    <div class="mc-card p-6">
+        <h2 class="text-lg font-bold text-white mb-4">Existing Users</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-gray-300">
+                <thead>
+                    <tr class="border-b border-white/10">
+                        <th class="p-2">ID</th>
+                        <th class="p-2">Username</th>
+                        <th class="p-2">Role</th>
+                        <th class="p-2 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="border-b border-white/5 hover:bg-white/5">
+                        <td class="p-2">{{ user.id }}</td>
+                        <td class="p-2 font-bold text-white">{{ user.username }}</td>
+                        <td class="p-2">
+                            <span class="px-2 py-1 rounded text-xs {{ 'bg-purple-500/20 text-purple-200' if user.role == 'admin' else 'bg-blue-500/20 text-blue-200' }}">
+                                {{ user.role }}
+                            </span>
+                        </td>
+                        <td class="p-2 text-right">
+                            {% if current_user.id != user.id %}
+                            <form method="POST" class="inline" onsubmit="return confirm('Are you sure?');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <button type="submit" class="text-red-400 hover:text-red-300 p-1">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-gray-500 italic text-xs">Current</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

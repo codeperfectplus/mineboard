@@ -1,4 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, g
+from flask import Flask, render_template, request, redirect, url_for, jsonify, g, flash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from src.rcon_client import run_command, get_online_players
 from src.commands import ITEMS, VILLAGE_TYPES
 from collections import OrderedDict
@@ -8,6 +10,29 @@ import os
 import sqlite3
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+class User(UserMixin):
+    def __init__(self, id, username, role):
+        self.id = id
+        self.username = username
+        self.role = role
+    
+    @staticmethod
+    def get(user_id):
+        db = get_db()
+        user = db.execute("SELECT * FROM users WHERE id = ?", (int(user_id),)).fetchone()
+        if not user:
+            return None
+        return User(id=user['id'], username=user['username'], role=user['role'])
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 # Allow overriding DB path via env so container volume mounts can control location
 DB_PATH = os.environ.get("DB_PATH", "/app/data/data.db")
@@ -74,6 +99,30 @@ def init_db():
         )
         """
     )
+    
+    # Create users table
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT DEFAULT 'user'
+        )
+        """
+    )
+    
+    # Check if any user exists (to create initial admin)
+    user_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    if user_count == 0:
+        admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+        admin_password = os.environ.get("ADMIN_PASSWORD", "admin")
+        print(f"Creating initial admin user: {admin_username}")
+        db.execute(
+            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+            (admin_username, generate_password_hash(admin_password), 'admin')
+        )
+    
     db.commit()
 
 
@@ -267,7 +316,71 @@ KITS_CONFIG = load_json_config('kits.json')
 QUICK_COMMANDS = load_json_config('quick_commands.json')
 print(f"Loaded {len(QUICK_COMMANDS) if isinstance(QUICK_COMMANDS, list) else 0} quick commands.")
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        db = get_db()
+        user_data = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+        
+        if user_data and check_password_hash(user_data['password_hash'], password):
+            user = User(id=user_data['id'], username=user_data['username'], role=user_data['role'])
+            login_user(user)
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('dashboard'))
+        else:
+            flash('Invalid username or password')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.route('/admin/users', methods=['GET', 'POST'])
+@login_required
+def manage_users():
+    if current_user.role != 'admin':
+        flash('Access denied: Admin only')
+        return redirect(url_for('dashboard'))
+    
+    db = get_db()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'create':
+            username = request.form['username']
+            password = request.form['password']
+            role = request.form.get('role', 'user')
+            
+            try:
+                db.execute(
+                    "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                    (username, generate_password_hash(password), role)
+                )
+                db.commit()
+                flash(f'User {username} created successfully')
+            except sqlite3.IntegrityError:
+                flash(f'Username {username} already exists')
+        elif action == 'delete':
+             user_id = request.form['user_id']
+             if int(user_id) == current_user.id:
+                 flash('Cannot delete yourself')
+             else:
+                 db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+                 db.commit()
+                 flash('User deleted')
+            
+    users = db.execute("SELECT id, username, role FROM users").fetchall()
+    return render_template('manage_users.html', users=users)
+
 @app.route("/")
+@login_required
 def dashboard():
     players = get_online_players()
     return render_template(
@@ -281,12 +394,14 @@ def dashboard():
     )
 
 @app.route("/diagnostics")
+@login_required
 def diagnostics():
     """RCON diagnostics page"""
     return render_template("diagnostics.html")
 
 
 @app.route("/api/error-logs")
+@login_required
 def api_error_logs():
     """API endpoint to retrieve error logs"""
     limit = request.args.get('limit', 50, type=int)
@@ -295,12 +410,14 @@ def api_error_logs():
 
 
 @app.route("/error-logs")
+@login_required
 def error_logs_page():
     """Dedicated error logs page"""
     return render_template("error_logs.html")
 
 
 @app.route("/api/error-logs/clear", methods=["POST"])
+@login_required
 def clear_error_logs():
     """Clear all error logs"""
     try:
@@ -313,18 +430,21 @@ def clear_error_logs():
 
 
 @app.route("/player")
+@login_required
 def player():
     """Player management page"""
     players = get_online_players()
     return render_template("player.html", players=players)
 
 @app.route("/api/players")
+@login_required
 def api_players():
     """API endpoint to refresh player list"""
     players = get_online_players()
     return jsonify({"players": players, "count": len(players)})
 
 @app.route("/api/test-connection")
+@login_required
 def test_connection():
     """Test RCON connection and return diagnostics"""
     from rcon_client import RCON_HOST, RCON_PORT, RCON_PASSWORD
@@ -344,6 +464,7 @@ def test_connection():
 
 
 @app.route("/api/locations", methods=["GET", "POST"])
+@login_required
 def api_locations():
     if request.method == "GET":
         return jsonify({"locations": fetch_locations()})
@@ -367,6 +488,7 @@ def api_locations():
 
 
 @app.route("/api/locations/<loc_id>", methods=["PUT", "PATCH", "DELETE"])
+@login_required
 def api_location_detail(loc_id):
     if request.method == "DELETE":
         delete_location(loc_id)
@@ -391,6 +513,7 @@ def api_location_detail(loc_id):
 
 
 @app.route("/api/player-stats", methods=["POST"])
+@login_required
 def api_player_stats():
     """Get player statistics like health, food, XP, etc."""
     player = request.form.get("player") if request.form else (request.json or {}).get("player")
@@ -432,6 +555,7 @@ def api_player_stats():
 
 
 @app.route("/api/player-inventory", methods=["POST"])
+@login_required
 def api_player_inventory():
     """Get player inventory items (simplified version)"""
     player = request.form.get("player") if request.form else (request.json or {}).get("player")
@@ -455,6 +579,7 @@ def api_player_inventory():
 
 
 @app.route("/api/player-history", methods=["POST"])
+@login_required
 def api_player_history():
     """Get recent actions for a player from item usage history"""
     player = request.form.get("player") if request.form else (request.json or {}).get("player")
@@ -477,6 +602,7 @@ def api_player_history():
 
 
 @app.route("/api/player-location", methods=["POST"])
+@login_required
 def api_player_location():
     player = request.form.get("player") if request.form else (request.json or {}).get("player")
     if not player:
@@ -499,6 +625,7 @@ def api_player_location():
     return jsonify({"success": True, "coordinates": {"x": x, "y": y, "z": z}})
 
 @app.route("/command", methods=["POST"])
+@login_required
 def execute_command():
     """Execute any Minecraft command"""
     cmd = request.form.get("command")
@@ -515,6 +642,7 @@ def execute_command():
     return jsonify({"success": True, "result": result})
 
 @app.route("/tp", methods=["POST"])
+@login_required
 def teleport():
     print("\n=== TELEPORT REQUEST ===")
     player = request.form.get("player")
@@ -556,6 +684,7 @@ def teleport():
 
 
 @app.route("/tp/coordinates", methods=["POST"])
+@login_required
 def teleport_coordinates():
     print("\n=== TELEPORT COORD REQUEST ===")
     player = request.form.get("player")
@@ -577,6 +706,7 @@ def teleport_coordinates():
 
 
 @app.route("/api/usage/<item_name>", methods=["DELETE"])
+@login_required
 def delete_item_usage(item_name):
     db = get_db()
     db.execute("DELETE FROM item_usage WHERE item = ?", (item_name,))
@@ -585,6 +715,7 @@ def delete_item_usage(item_name):
 
 
 @app.route("/give", methods=["POST"])
+@login_required
 def give_item():
     print("\n=== GIVE ITEM REQUEST ===")
     player = request.form.get("player")
@@ -618,6 +749,7 @@ def give_item():
     return jsonify({"success": True, "result": result})
 
 @app.route("/locate", methods=["POST"])
+@login_required
 def locate_village():
     player = request.form["player"]
     village_type = request.form["village_type"]
@@ -638,6 +770,7 @@ def locate_village():
     return jsonify({"success": True, "result": result})
 
 @app.route("/quick-command", methods=["POST"])
+@login_required
 def quick_command():
     """Execute quick gameplay commands"""
     print("\n=== QUICK COMMAND REQUEST ===")

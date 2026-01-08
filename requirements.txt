@@ -2,3 +2,5 @@ Flask==3.0.0
 mcrcon==0.7.0
 python-dotenv==1.0.0
 gunicorn==21.2.0
+Flask-Login==0.6.3
+Werkzeug==3.0.1
