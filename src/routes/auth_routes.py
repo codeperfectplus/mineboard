@@ -9,26 +9,35 @@ from src.models import User
 auth_bp = Blueprint('auth', __name__)
 
 
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """User login."""
     if current_user.is_authenticated:
+        # If user must change password, force redirect
+        if hasattr(current_user, 'force_password_change') and current_user.force_password_change:
+            return redirect(url_for('auth.change_password'))
         return redirect(url_for('main.dashboard'))
-    
+
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         db = get_db()
         user_data = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        
+
         if user_data and check_password_hash(user_data['password_hash'], password):
-            user = User(id=user_data['id'], username=user_data['username'], role=user_data['role'])
+            # Check if password is default (admin)
+            from src.models import User
+            user = User.get(user_data['id'])
             login_user(user)
+            if user.force_password_change:
+                flash('You must change your default password before using Mineboard.', 'error')
+                return redirect(url_for('auth.change_password'))
             next_page = request.args.get('next')
             return redirect(next_page or url_for('main.dashboard'))
         else:
             flash('Invalid username or password')
-            
+
     return render_template('login.html')
 
 
@@ -40,50 +49,54 @@ def logout():
     return redirect(url_for('auth.login'))
 
 
+
 @auth_bp.route('/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
-    """Change user password."""
+    """Change user password. Force if using default password."""
+    db = get_db()
+    user_data = db.execute("SELECT * FROM users WHERE id = ?", (current_user.id,)).fetchone()
+    force_change = False
+    if user_data and user_data['username'] == 'admin' and check_password_hash(user_data['password_hash'], 'admin'):
+        force_change = True
+
     if request.method == 'POST':
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
         confirm_password = request.form.get('confirm_password')
-        
+
         # Validate input
         if not all([current_password, new_password, confirm_password]):
             flash('All fields are required', 'error')
             return redirect(url_for('auth.change_password'))
-        
+
         if new_password != confirm_password:
             flash('New passwords do not match', 'error')
             return redirect(url_for('auth.change_password'))
-        
+
         if len(new_password) < 6:
             flash('Password must be at least 6 characters long', 'error')
             return redirect(url_for('auth.change_password'))
-        
+
         # Verify current password
-        db = get_db()
-        user_data = db.execute(
-            "SELECT password_hash FROM users WHERE id = ?",
-            (current_user.id,)
-        ).fetchone()
-        
         if not user_data or not check_password_hash(user_data['password_hash'], current_password):
             flash('Current password is incorrect', 'error')
             return redirect(url_for('auth.change_password'))
-        
+
         # Update password
         db.execute(
             "UPDATE users SET password_hash = ? WHERE id = ?",
             (generate_password_hash(new_password), current_user.id)
         )
         db.commit()
-        
+
         flash('Password changed successfully!', 'success')
         return redirect(url_for('main.settings'))
-    
-    return render_template('change_password.html')
+
+    # If forced, show warning
+    if force_change:
+        flash('You must change your default password before using Mineboard.', 'error')
+    return render_template('change_password.html', force_change=force_change)
 
 
 @auth_bp.route('/admin/users', methods=['GET', 'POST'])

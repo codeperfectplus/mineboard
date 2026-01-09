@@ -67,92 +67,68 @@ check_root() {
 
 # Check if Git is installed
 check_git() {
-    print_info "Checking Git installation..."
     if ! command -v git &> /dev/null; then
-        print_error "Git is not installed. Installing..."
-        apt-get update && apt-get install -y git || {
-            print_error "Failed to install git. Please install it manually."
+        print_info "Installing Git..."
+        apt-get update -qq && apt-get install -y git -qq || {
+            print_error "Failed to install Git. Please install it manually."
             exit 1
         }
     fi
-    print_success "Git is installed"
 }
 
 # Check if Python 3.8+ is installed
 check_python() {
-    print_info "Checking Python installation..."
-    
     if ! command -v python3 &> /dev/null; then
         print_error "Python 3 is not installed. Please install Python 3.8 or higher."
         exit 1
     fi
     
-    PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-    print_success "Python $PYTHON_VERSION is installed"
-    
-    # Check for pip
+    # Check for pip silently, suppress all output and errors
     if ! python3 -m pip --version &> /dev/null; then
-        print_warning "pip not found, attempting to install..."
-        python3 -m ensurepip --default-pip 2>/dev/null || print_warning "Could not install pip automatically"
+        python3 -m ensurepip --default-pip >/dev/null 2>&1 || true
     fi
-    
-    print_success "Python environment is ready"
 }
 
 # Clone repository
 clone_repo() {
-    print_info "Cloning Mineboard repository..."
+    print_info "⬇  Downloading Mineboard..."
     
     if [ -d "$TEMP_DIR" ]; then
-        print_warning "Cleaning up old temporary directory..."
-        rm -rf "$TEMP_DIR"
+        rm -rf "$TEMP_DIR" 2>/dev/null
     fi
     
-    git clone "$REPO_URL" "$TEMP_DIR" || {
-        print_error "Failed to clone repository"
+    git clone -q "$REPO_URL" "$TEMP_DIR" 2>/dev/null || {
+        print_error "Failed to download"
         exit 1
     }
-    
-    print_success "Repository cloned successfully"
 }
 
 # Create application user
 create_user() {
-    print_info "Creating application user: $APP_USER"
-    
-    if id "$APP_USER" &>/dev/null; then
-        print_warning "User $APP_USER already exists"
-    else
-        useradd --system --no-create-home --shell /bin/false $APP_USER
-        print_success "User $APP_USER created"
+    if ! id "$APP_USER" &>/dev/null; then
+        useradd --system --no-create-home --shell /bin/false $APP_USER 2>/dev/null
     fi
 }
 
 # Create installation directory
 create_install_dir() {
-    print_info "Creating installation directory: $INSTALL_DIR"
-    
     if [ -d "$INSTALL_DIR" ]; then
-        print_warning "Directory $INSTALL_DIR already exists"
-        print_info "Stopping service if running..."
         systemctl stop $SERVICE_NAME 2>/dev/null || true
-        print_info "Removing existing directory..."
-        rm -rf "$INSTALL_DIR"
+        rm -rf "$INSTALL_DIR" 2>/dev/null
     fi
     
     mkdir -p "$INSTALL_DIR"
     mkdir -p "$INSTALL_DIR/data"
-    print_success "Installation directory created"
 }
 
 # Copy application files
 copy_files() {
-    print_info "Copying application files..."
+    print_info "📦 Installing application files..."
     
     cd "$TEMP_DIR"
     
     # Copy all files except .git, __pycache__, venv, etc.
-    rsync -av --progress \
+    rsync -a --quiet \
         --exclude='.git' \
         --exclude='__pycache__' \
         --exclude='*.pyc' \
@@ -162,53 +138,44 @@ copy_files() {
         --exclude='minecraft-data' \
         --exclude='docker-compose.yml' \
         --exclude='Dockerfile' \
-        "$TEMP_DIR/" "$INSTALL_DIR/" || {
+        "$TEMP_DIR/" "$INSTALL_DIR/" 2>/dev/null || {
             # Fallback to cp if rsync is not available
-            print_warning "rsync not found, using cp instead..."
             cp -r "$TEMP_DIR/"* "$INSTALL_DIR/" 2>/dev/null || true
             find "$TEMP_DIR" -name ".*" ! -name "." ! -name ".." -exec cp -r {} "$INSTALL_DIR/" \; 2>/dev/null || true
         }
-    
-    print_success "Files copied successfully"
 }
 
 # Create virtual environment and install dependencies
 setup_python_env() {
-    print_info "Creating Python virtual environment..."
+    print_info "📚 Installing Python dependencies (this may take a minute)..."
     
     cd "$INSTALL_DIR"
     
     # Try to create venv, if it fails, continue anyway
     if python3 -m venv venv 2>/dev/null; then
-        print_success "Virtual environment created"
+        : # Success, do nothing
     else
-        print_warning "Could not create venv, trying with --without-pip flag..."
         python3 -m venv --without-pip venv 2>/dev/null || {
-            print_warning "venv creation failed, will try to install dependencies globally"
             mkdir -p venv/bin
             ln -sf $(which python3) venv/bin/python
             ln -sf $(which pip3) venv/bin/pip 2>/dev/null || true
         }
     fi
     
-    print_info "Installing Python dependencies..."
+    # Install dependencies quietly
     if [ -f "$INSTALL_DIR/venv/bin/pip" ]; then
-        "$INSTALL_DIR/venv/bin/pip" install --upgrade pip 2>/dev/null || true
+        "$INSTALL_DIR/venv/bin/pip" install --upgrade pip -q 2>/dev/null || true
+        "$INSTALL_DIR/venv/bin/pip" install -q -r "$INSTALL_DIR/requirements.txt" 2>/dev/null || \
         "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
     else
-        print_warning "Using system pip to install dependencies..."
+        python3 -m pip install -q -r "$INSTALL_DIR/requirements.txt" --user 2>/dev/null || \
         python3 -m pip install -r "$INSTALL_DIR/requirements.txt" --user
     fi
-    
-    print_success "Python dependencies installed"
 }
 
 # Create .env file if it doesn't exist
 create_env_file() {
-    print_info "Checking .env file..."
-    
     if [ ! -f "$INSTALL_DIR/.env" ]; then
-        print_info "Creating .env file..."
         cat > "$INSTALL_DIR/.env" << EOF
 # Mineboard Configuration
 SECRET_KEY=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | base64)
@@ -229,16 +196,11 @@ DB_PATH=/opt/mineboard/data/data.db
 # URL_PREFIX=/mineboard
 EOF
         chmod 600 "$INSTALL_DIR/.env"
-        print_success ".env file created with random SECRET_KEY"
-    else
-        print_success ".env file already exists"
     fi
 }
 
 # Update app.py to use environment port
 update_app_py() {
-    print_info "Updating app.py for production..."
-    
     # Check if app.py needs updating
     if ! grep -q "if __name__ == '__main__':" "$INSTALL_DIR/app.py"; then
         cat >> "$INSTALL_DIR/app.py" << 'EOF'
@@ -248,57 +210,48 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5090))
     app.run(host='0.0.0.0', port=port, debug=False)
 EOF
-        print_success "app.py updated for production"
-    else
-        print_info "app.py already configured"
     fi
 }
 
 # Set proper permissions
 set_permissions() {
-    print_info "Setting file permissions..."
-    
-    chown -R $APP_USER:$APP_USER "$INSTALL_DIR"
-    chmod -R 755 "$INSTALL_DIR"
-    chmod 600 "$INSTALL_DIR/.env"
-    chmod -R 775 "$INSTALL_DIR/data"
-    
-    print_success "Permissions set successfully"
+    chown -R $APP_USER:$APP_USER "$INSTALL_DIR" 2>/dev/null
+    chmod -R 755 "$INSTALL_DIR" 2>/dev/null
+    chmod 600 "$INSTALL_DIR/.env" 2>/dev/null
+    chmod -R 775 "$INSTALL_DIR/data" 2>/dev/null
 }
 
 # Install systemd service
 install_service() {
-    print_info "Installing systemd service..."
+    print_info "⚙️  Configuring system service..."
     
     # Copy service file
     cp "$INSTALL_DIR/mineboard-native.service" "$SERVICE_FILE"
     
     # Reload systemd
     systemctl daemon-reload
-    
-    print_success "Systemd service installed"
 }
 
 # Enable and start service
 start_service() {
-    print_info "Enabling and starting Mineboard service..."
+    print_info "🚀 Starting Mineboard..."
     
     # Enable service to start on boot
-    systemctl enable $SERVICE_NAME
+    systemctl enable $SERVICE_NAME 2>/dev/null
     
     # Start the service
     systemctl start $SERVICE_NAME
     
     # Wait a moment for the service to start
-    sleep 3
+    sleep 2
     
     # Check status
     if systemctl is-active --quiet $SERVICE_NAME; then
-        print_success "Mineboard service is running!"
+        print_success "✓ Mineboard is running!"
     else
-        print_error "Failed to start Mineboard service"
-        print_info "Check logs with: journalctl -u $SERVICE_NAME -f"
-        systemctl status $SERVICE_NAME --no-pager
+        print_error "Failed to start Mineboard"
+        echo ""
+        echo "Check logs with: sudo journalctl -u $SERVICE_NAME -n 50"
         exit 1
     fi
 }
@@ -306,48 +259,48 @@ start_service() {
 # Cleanup temp directory
 cleanup() {
     if [ -d "$TEMP_DIR" ]; then
-        print_info "Cleaning up temporary files..."
-        rm -rf "$TEMP_DIR"
-        print_success "Cleanup complete"
+        rm -rf "$TEMP_DIR" 2>/dev/null
     fi
 }
 
 # Display final information
 show_install_info() {
     echo ""
-    echo "======================================"
-    print_success "Mineboard Deployment Complete!"
-    echo "======================================"
+    echo -e "\033[1;32m==============================================\033[0m"
+    echo -e "\033[1;32m   🎉 Mineboard Installed Successfully! 🎉   \033[0m"
+    echo -e "\033[1;32m==============================================\033[0m"
     echo ""
-    echo "Installation Directory: $INSTALL_DIR"
-    echo "Service Name: $SERVICE_NAME"
-    echo "Running as User: $APP_USER"
+    echo -e "\033[1;36mWhere to find things:\033[0m"
+    echo -e "   \033[1;37m📁 Install Dir:\033[0m     $INSTALL_DIR"
+    echo -e "   \033[1;37m🛡️  Service Name:\033[0m   $SERVICE_NAME"
+    echo -e "   \033[1;37m👤 Runs as:\033[0m         $APP_USER"
     echo ""
-    echo "Access Mineboard at: http://localhost:$APP_PORT"
+    echo -e "\033[1;36mOpen your browser:\033[0m"
+    echo -e "   \033[1;32m🌐 http://localhost:$APP_PORT\033[0m"
     echo ""
-    echo "======================================"
-    echo "  Login Information"
-    echo "======================================"
+    echo -e "\033[1;33m==============================================\033[0m"
+    echo -e "\033[1;33m           👤 Login Information               \033[0m"
+    echo -e "\033[1;33m==============================================\033[0m"
     echo ""
-    echo "On first visit, you'll be prompted to create an admin account."
+    echo -e "\033[1;37mOn your first visit, you'll create an admin account.\033[0m"
     echo ""
-    echo "If default credentials are set in .env file:"
-    echo "  Username: admin"
-    echo "  Password: admin"
+    echo -e "\033[1;37mIf you set default credentials in .env:\033[0m"
+    echo -e "   \033[1;36mUsername:\033[0m admin"
+    echo -e "   \033[1;36mPassword:\033[0m admin"
     echo ""
-    echo "⚠️  IMPORTANT: Change the default password after first login!"
+    echo -e "\033[1;31m⚠️  IMPORTANT: Change the default password after first login!\033[0m"
     echo ""
-    echo "======================================"
-    echo "  Service Management"
-    echo "======================================"
+    echo -e "\033[1;34m==============================================\033[0m"
+    echo -e "\033[1;34m         🛠️  Service Management              \033[0m"
+    echo -e "\033[1;34m==============================================\033[0m"
     echo ""
-    echo "  Start:   sudo systemctl start $SERVICE_NAME"
-    echo "  Stop:    sudo systemctl stop $SERVICE_NAME"
-    echo "  Restart: sudo systemctl restart $SERVICE_NAME"
-    echo "  Status:  sudo systemctl status $SERVICE_NAME"
-    echo "  Logs:    sudo journalctl -u $SERVICE_NAME -f"
+    echo -e "   \033[1;37mStart:\033[0m    sudo systemctl start $SERVICE_NAME"
+    echo -e "   \033[1;37mStop:\033[0m     sudo systemctl stop $SERVICE_NAME"
+    echo -e "   \033[1;37mRestart:\033[0m  sudo systemctl restart $SERVICE_NAME"
+    echo -e "   \033[1;37mStatus:\033[0m   sudo systemctl status $SERVICE_NAME"
+    echo -e "   \033[1;37mLogs:\033[0m     sudo journalctl -u $SERVICE_NAME -f"
     echo ""
-    print_info "Configure your RCON settings in the Settings page to connect to your Minecraft server!"
+    echo -e "\033[1;36m💡 Next: Configure your RCON settings in the Settings page to connect to your Minecraft server!\033[0m"
     echo ""
 }
 
@@ -359,36 +312,26 @@ uninstall() {
     echo "======================================"
     echo ""
     
-    print_info "Stopping service..."
+    print_info "Removing Mineboard..."
+    
     systemctl stop $SERVICE_NAME 2>/dev/null || true
-    
-    print_info "Disabling service..."
     systemctl disable $SERVICE_NAME 2>/dev/null || true
-    
-    print_info "Removing service file..."
-    rm -f $SERVICE_FILE
-    
-    print_info "Removing application files..."
-    rm -rf $INSTALL_DIR
-    
-    print_info "Removing application user..."
+    rm -f $SERVICE_FILE 2>/dev/null
+    rm -rf $INSTALL_DIR 2>/dev/null
     userdel $APP_USER 2>/dev/null || true
-    
-    print_info "Reloading systemd..."
-    systemctl daemon-reload
+    systemctl daemon-reload 2>/dev/null
     
     echo ""
-    print_success "Mineboard has been uninstalled successfully!"
+    print_success "Mineboard has been uninstalled!"
     echo ""
 }
 
 # Install function
 install() {
     echo ""
-    echo "======================================"
-    echo "  Mineboard Native Deployment"
-    echo "  (Without Docker)"
-    echo "======================================"
+    echo "====================================="
+    echo "     Mineboard Installation"
+    echo "====================================="
     echo ""
     
     check_root
