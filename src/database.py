@@ -30,55 +30,66 @@ def init_db():
     """Initialize database tables."""
     db = get_db()
 
-    # RCON configuration table (single row)
+    # RCON configuration table (per-user)
     db.execute(
         """
         CREATE TABLE IF NOT EXISTS rcon_config (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             host TEXT,
             port INTEGER,
-            password TEXT
+            password TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(user_id)
         )
         """
     )
     
-    # Create locations table
+    # Create locations table (per-user)
     db.execute(
         """
         CREATE TABLE IF NOT EXISTS locations (
-            id TEXT PRIMARY KEY,
+            id TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             icon TEXT DEFAULT 'map-marker-alt',
             description TEXT,
             x INTEGER NOT NULL,
             y INTEGER NOT NULL,
-            z INTEGER NOT NULL
+            z INTEGER NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            PRIMARY KEY (id, user_id)
         )
         """
     )
     
-    # Create item usage table
+    # Create item usage table (per-user)
     db.execute(
         """
         CREATE TABLE IF NOT EXISTS item_usage (
-            item TEXT PRIMARY KEY,
+            item TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
             used_count INTEGER NOT NULL DEFAULT 0,
-            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            PRIMARY KEY (item, user_id)
         )
         """
     )
     
-    # Create error logs table
+    # Create error logs table (per-user)
     db.execute(
         """
         CREATE TABLE IF NOT EXISTS error_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             command_type TEXT NOT NULL,
             command TEXT NOT NULL,
             error_message TEXT NOT NULL,
             player TEXT,
-            endpoint TEXT
+            endpoint TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
         """
     )

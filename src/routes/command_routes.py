@@ -1,6 +1,6 @@
 """Command execution routes."""
 from flask import Blueprint, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from src.rcon_client import run_command, is_rcon_error
 from src.services.item_service import record_item_usage
 from src.services.location_service import fetch_locations
@@ -25,7 +25,7 @@ def execute_command():
         if cmd.startswith("/"):
             cmd = f"{cmd} {player}"
     
-    result = run_command(cmd)
+    result = run_command(cmd, current_user.id)
     return jsonify({"success": True, "result": result})
 
 
@@ -39,17 +39,18 @@ def teleport():
     print(f"Player: {player}")
     print(f"Location ID: {location_id}")
     
-    location = next((loc for loc in fetch_locations() if loc['id'] == location_id), None)
+    location = next((loc for loc in fetch_locations(current_user.id) if loc['id'] == location_id), None)
     
     if location:
         coords = location['coordinates']
         cmd = f"/tp {player} {coords['x']} {coords['y']} {coords['z']}"
         print(f"Executing command: {cmd}")
-        result = run_command(cmd)
+        result = run_command(cmd, current_user.id)
         print(f"RCON result: {result}")
         
         if is_rcon_error(result):
             log_error(
+                current_user.id,
                 command_type="teleport",
                 command=cmd,
                 error_message=result,
@@ -61,6 +62,7 @@ def teleport():
     else:
         print(f"ERROR: Location not found: {location_id}")
         log_error(
+            current_user.id,
             command_type="teleport",
             command="N/A",
             error_message=f"Location not found: {location_id}",
@@ -88,7 +90,7 @@ def teleport_coordinates():
 
     cmd = f"/tp {player} {x} {y} {z}"
     print(f"Executing coord teleport: {cmd}")
-    result = run_command(cmd)
+    result = run_command(cmd, current_user.id)
     print(f"RCON result: {result}")
     return jsonify({"success": True, "result": result})
 
@@ -110,11 +112,12 @@ def give_item():
     print(f"Amount: {amount}")
     cmd = f"/give {player} minecraft:{item} {amount}"
     print(f"Executing command: {cmd}")
-    result = run_command(cmd)
+    result = run_command(cmd, current_user.id)
     print(f"RCON result: {result}")
     
     if is_rcon_error(result):
         log_error(
+            current_user.id,
             command_type="give_item",
             command=cmd,
             error_message=result,
@@ -122,7 +125,7 @@ def give_item():
             endpoint="/give"
         )
     else:
-        record_item_usage(item, amount)
+        record_item_usage(current_user.id, item, amount)
     
     return jsonify({"success": True, "result": result})
 
@@ -134,10 +137,11 @@ def locate_village():
     player = request.form["player"]
     village_type = request.form["village_type"]
     cmd = f"/execute as {player} run locate structure minecraft:village_{village_type}"
-    result = run_command(cmd)
+    result = run_command(cmd, current_user.id)
     
     if is_rcon_error(result):
         log_error(
+            current_user.id,
             command_type="locate_village",
             command=cmd,
             error_message=result,
@@ -257,12 +261,13 @@ def quick_command():
     cmd = commands_map.get(command_type)
     if cmd:
         print(f"Executing command: {cmd}")
-        result = run_command(cmd)
+        result = run_command(cmd, current_user.id)
         print(f"RCON result: {result}")
         
         if is_rcon_error(result):
             print(f"Command failed: {result}")
             log_error(
+                current_user.id,
                 command_type=command_type,
                 command=cmd,
                 error_message=result,
@@ -283,6 +288,7 @@ def quick_command():
     
     print(f"ERROR: Unknown command type: {command_type}")
     log_error(
+        current_user.id,
         command_type=command_type,
         command="N/A",
         error_message=f"Unknown command type: {command_type}",
@@ -311,12 +317,13 @@ def give_kit(kit_id):
         for item_data in kit['items']:
             cmd = f"/give {player} minecraft:{item_data['item']} {item_data['amount']}"
             print(f"Executing: {cmd}")
-            result = run_command(cmd)
+            result = run_command(cmd, current_user.id)
             print(f"Result: {result}")
             results.append(result)
             
             if is_rcon_error(result):
                 log_error(
+                    current_user.id,
                     command_type=f"kit_{kit_id}",
                     command=cmd,
                     error_message=result,
@@ -324,7 +331,7 @@ def give_kit(kit_id):
                     endpoint="/kit"
                 )
             if not str(result).startswith("Error"):
-                record_item_usage(item_data["item"], item_data["amount"])
+                record_item_usage(current_user.id, item_data["item"], item_data["amount"])
         return jsonify({"success": True, "results": results})
     
     print(f"ERROR: Kit not found: {kit_id}")

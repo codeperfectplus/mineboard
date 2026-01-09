@@ -16,16 +16,17 @@ main_bp = Blueprint('main', __name__)
 @login_required
 def dashboard():
     """Main dashboard page."""
-    players = get_online_players()
+    user_id = current_user.id
+    players = get_online_players(user_id)
     kits_config = get_kits()
     quick_commands = get_quick_commands()
     
     return render_template(
         "dashboard.html",
         players=players,
-        items=build_item_catalog(),
+        items=build_item_catalog(user_id),
         village_types=VILLAGE_TYPES,
-        locations=fetch_locations(),
+        locations=fetch_locations(user_id),
         kits=kits_config.get("kits", []),
         quick_commands=quick_commands if isinstance(quick_commands, list) else [],
     )
@@ -35,22 +36,15 @@ def dashboard():
 @login_required
 def settings():
     """RCON settings page."""
-    rcon_config = get_rcon_config()
+    rcon_config = get_rcon_config(current_user.id)
     return render_template("settings.html", rcon_config=rcon_config)
 
 
 @main_bp.route('/rcon-config', methods=['POST'])
 @login_required
 def update_rcon_config():
-    """Allow admins to save RCON settings when not managed by .env."""
-    if getattr(current_user, "role", "user") != "admin":
-        flash("Access denied: Admin only")
-        return redirect(url_for('main.settings'))
-
-    current_cfg = get_rcon_config()
-    if current_cfg.get("source") == "env":
-        flash("RCON settings are managed via .env and cannot be changed here.")
-        return redirect(url_for('main.settings'))
+    """Allow users to save RCON settings."""
+    user_id = current_user.id
 
     host = (request.form.get('host') or '').strip()
     port_raw = (request.form.get('port') or '').strip()
@@ -74,8 +68,8 @@ def update_rcon_config():
             flash(err)
         return redirect(url_for('main.settings'))
 
-    save_rcon_config(host, port_val, password)
-    reset_rcon_client()
+    save_rcon_config(user_id, host, port_val, password)
+    reset_rcon_client(user_id)
     flash("RCON settings saved. New connections will use these values.")
     return redirect(url_for('main.settings'))
 
@@ -91,5 +85,5 @@ def error_logs_page():
 @login_required
 def player():
     """Player management page."""
-    players = get_online_players()
+    players = get_online_players(current_user.id)
     return render_template("player.html", players=players)

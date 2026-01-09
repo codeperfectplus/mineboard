@@ -3,7 +3,7 @@ import sys
 import os
 import platform
 from flask import Blueprint, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from src.services.location_service import fetch_locations, upsert_location, delete_location
 from src.services.item_service import delete_item_usage
 from src.services.error_service import get_error_logs, clear_error_logs
@@ -21,7 +21,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 @login_required
 def api_players():
     """API endpoint to refresh player list."""
-    players = get_online_players()
+    players = get_online_players(current_user.id)
     return jsonify({"players": players, "count": len(players)})
 
 
@@ -29,9 +29,10 @@ def api_players():
 @login_required
 def test_connection():
     """Test RCON connection and return diagnostics."""
-    cfg = get_rcon_config()
+    user_id = current_user.id
+    cfg = get_rcon_config(user_id)
 
-    result = run_command("list")
+    result = run_command("list", user_id)
     
     diagnostics = {
         "host": cfg["host"],
@@ -72,8 +73,9 @@ def app_info():
 @login_required
 def api_locations():
     """Get or create locations."""
+    user_id = current_user.id
     if request.method == 'GET':
-        return jsonify({"locations": fetch_locations()})
+        return jsonify({"locations": fetch_locations(user_id)})
 
     data = request.form or request.json or {}
     required = ["id", "name", "x", "y", "z"]
@@ -81,7 +83,7 @@ def api_locations():
     if missing:
         return jsonify({"success": False, "error": f"Missing fields: {', '.join(missing)}"}), 400
 
-    upsert_location({
+    upsert_location(user_id, {
         "id": str(data.get("id")).strip(),
         "name": data.get("name").strip(),
         "icon": (data.get("icon") or "map-marker-alt").strip(),
@@ -97,8 +99,9 @@ def api_locations():
 @login_required
 def api_location_detail(loc_id):
     """Update or delete a specific location."""
+    user_id = current_user.id
     if request.method == 'DELETE':
-        delete_location(loc_id)
+        delete_location(user_id, loc_id)
         return jsonify({"success": True})
 
     data = request.form or request.json or {}
@@ -115,7 +118,7 @@ def api_location_detail(loc_id):
     if not payload["name"]:
         return jsonify({"success": False, "error": "Missing name"}), 400
 
-    upsert_location(payload)
+    upsert_location(user_id, payload)
     return jsonify({"success": True})
 
 
@@ -127,7 +130,7 @@ def api_player_stats():
     if not player:
         return jsonify({"success": False, "error": "Player is required"}), 400
 
-    stats = get_player_stats(player)
+    stats = get_player_stats(player, current_user.id)
     return jsonify({"success": True, "stats": stats})
 
 
@@ -139,7 +142,7 @@ def api_player_inventory():
     if not player:
         return jsonify({"success": False, "error": "Player is required"}), 400
     
-    inventory = get_player_inventory(player)
+    inventory = get_player_inventory(player, current_user.id)
     return jsonify({"success": True, "inventory": inventory})
 
 
@@ -151,7 +154,7 @@ def api_player_history():
     if not player:
         return jsonify({"success": False, "error": "Player is required"}), 400
     
-    actions = get_player_history(player)
+    actions = get_player_history(player, current_user.id)
     return jsonify({"success": True, "history": actions})
 
 
@@ -163,7 +166,7 @@ def api_player_location():
     if not player:
         return jsonify({"success": False, "error": "Player is required"}), 400
 
-    coordinates, error = get_player_location(player)
+    coordinates, error = get_player_location(player, current_user.id)
     if error:
         return jsonify({"success": False, "error": error}), 400
 
@@ -175,17 +178,19 @@ def api_player_location():
 def api_error_logs():
     """API endpoint to retrieve error logs."""
     limit = request.args.get('limit', 50, type=int)
-    logs = get_error_logs(limit)
+    user_id = current_user.id if current_user.role != 'admin' else None
+    logs = get_error_logs(user_id, limit)
     return jsonify({"success": True, "logs": logs})
 
 
 @api_bp.route('/error-logs/clear', methods=['POST'])
 @login_required
 def api_clear_error_logs():
-    """Clear all error logs."""
+    """Clear error logs."""
     try:
-        clear_error_logs()
-        return jsonify({"success": True, "message": "All error logs cleared"})
+        user_id = current_user.id if current_user.role != 'admin' else None
+        clear_error_logs(user_id)
+        return jsonify({"success": True, "message": "Error logs cleared"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
@@ -194,5 +199,5 @@ def api_clear_error_logs():
 @login_required
 def api_delete_item_usage(item_name):
     """Delete item usage record."""
-    delete_item_usage(item_name)
+    delete_item_usage(current_user.id, item_name)
     return jsonify({"success": True})

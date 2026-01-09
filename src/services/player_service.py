@@ -4,33 +4,33 @@ from src.rcon_client import run_command, get_online_players
 from src.database import get_db
 
 
-def get_player_stats(player):
+def get_player_stats(player, user_id):
     """Get player statistics like health, food, XP, etc."""
     stats = {}
     
     # Get Health
-    result = run_command(f"/data get entity {player} Health")
+    result = run_command(f"/data get entity {player} Health", user_id)
     if not str(result).startswith("Error"):
         match = re.search(r'(\d+\.?\d*)f?', str(result))
         if match:
             stats["health"] = float(match.group(1))
     
     # Get Food Level
-    result = run_command(f"/data get entity {player} foodLevel")
+    result = run_command(f"/data get entity {player} foodLevel", user_id)
     if not str(result).startswith("Error"):
         match = re.search(r'(\d+)', str(result))
         if match:
             stats["food"] = int(match.group(1))
     
     # Get XP Level
-    result = run_command(f"/data get entity {player} XpLevel")
+    result = run_command(f"/data get entity {player} XpLevel", user_id)
     if not str(result).startswith("Error"):
         match = re.search(r'(\d+)', str(result))
         if match:
             stats["xp_level"] = int(match.group(1))
     
     # Get Game Mode
-    result = run_command(f"/data get entity {player} playerGameType")
+    result = run_command(f"/data get entity {player} playerGameType", user_id)
     if not str(result).startswith("Error"):
         match = re.search(r'(\d+)', str(result))
         if match:
@@ -40,11 +40,12 @@ def get_player_stats(player):
     return stats
 
 
-def get_player_inventory(player):
+def get_player_inventory(player, user_id):
     """Get player inventory items (simplified version using recent items)."""
     db = get_db()
     recent_items = db.execute(
-        "SELECT item, used_count, last_used FROM item_usage ORDER BY last_used DESC LIMIT 20"
+        "SELECT item, used_count, last_used FROM item_usage WHERE user_id = ? ORDER BY last_used DESC LIMIT 20",
+        [user_id]
     ).fetchall()
     
     inventory = [{
@@ -56,11 +57,12 @@ def get_player_inventory(player):
     return inventory
 
 
-def get_player_history(player):
+def get_player_history(player, user_id):
     """Get recent actions for a player from item usage history."""
     db = get_db()
     history = db.execute(
-        "SELECT item, used_count, last_used FROM item_usage ORDER BY last_used DESC LIMIT 15"
+        "SELECT item, used_count, last_used FROM item_usage WHERE user_id = ? ORDER BY last_used DESC LIMIT 15",
+        [user_id]
     ).fetchall()
     
     actions = [{
@@ -72,9 +74,9 @@ def get_player_history(player):
     return actions
 
 
-def get_player_location(player):
+def get_player_location(player, user_id):
     """Get player's current coordinates."""
-    result = run_command(f"/data get entity {player} Pos")
+    result = run_command(f"/data get entity {player} Pos", user_id)
     if str(result).startswith("Error"):
         return None, result
 

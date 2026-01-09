@@ -1,46 +1,33 @@
-"""RCON configuration helpers with env override and DB persistence."""
+"""RCON configuration helpers with database persistence."""
 import os
-from typing import Dict, Any
-from dotenv import load_dotenv
+from typing import Dict, Any, Optional
 from src.database import get_db
-
-# Ensure .env is loaded before accessing environment variables
-load_dotenv()
 
 DEFAULT_RCON_HOST = "localhost"
 DEFAULT_RCON_PORT = 25575
 
 
-def _env_values():
-    host = os.getenv("RCON_HOST")
-    port = os.getenv("RCON_PORT")
-    password = os.getenv("RCON_PASSWORD")
-    return host, port, password
-
-
-def env_has_rcon() -> bool:
-    """Return True when all RCON env vars are present."""
-    host, port, password = _env_values()
-    return bool(host) and bool(port) and bool(password)
-
-
-def get_rcon_config() -> Dict[str, Any]:
-    """Return effective RCON config, preferring environment variables over DB."""
-    host_env, port_env, password_env = _env_values()
-    if env_has_rcon():
-        try:
-            port_val = int(port_env)
-        except (TypeError, ValueError):
-            port_val = DEFAULT_RCON_PORT
+def get_rcon_config(user_id: Optional[int] = None) -> Dict[str, Any]:
+    """Return RCON config for a user from database.
+    
+    Args:
+        user_id: User ID to get config for. If None, returns defaults.
+    """
+    if user_id is None:
         return {
-            "host": host_env,
-            "port": port_val,
-            "password": password_env or "",
-            "source": "env",
+            "host": DEFAULT_RCON_HOST,
+            "port": DEFAULT_RCON_PORT,
+            "password": "",
+            "source": "default",
+            "user_id": None,
         }
 
     db = get_db()
-    row = db.execute("SELECT host, port, password FROM rcon_config WHERE id = 1").fetchone()
+    row = db.execute(
+        "SELECT host, port, password FROM rcon_config WHERE user_id = ?", 
+        (user_id,)
+    ).fetchone()
+    
     if row:
         port_val = row["port"] if row["port"] is not None else DEFAULT_RCON_PORT
         return {
@@ -48,6 +35,7 @@ def get_rcon_config() -> Dict[str, Any]:
             "port": int(port_val),
             "password": row["password"] or "",
             "source": "db",
+            "user_id": user_id,
         }
 
     return {
@@ -55,22 +43,23 @@ def get_rcon_config() -> Dict[str, Any]:
         "port": DEFAULT_RCON_PORT,
         "password": "",
         "source": "default",
+        "user_id": user_id,
     }
 
 
-def save_rcon_config(host: str, port: int, password: str) -> None:
-    """Persist RCON config into the database (id=1)."""
+def save_rcon_config(user_id: int, host: str, port: int, password: str) -> None:
+    """Persist RCON config into the database for a specific user."""
     db = get_db()
     db.execute(
         """
-        INSERT INTO rcon_config (id, host, port, password)
-        VALUES (1, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
+        INSERT INTO rcon_config (user_id, host, port, password)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
             host = excluded.host,
             port = excluded.port,
             password = excluded.password
         """,
-        (host, port, password),
+        (user_id, host, port, password),
     )
     db.commit()
 
@@ -78,8 +67,6 @@ def save_rcon_config(host: str, port: int, password: str) -> None:
 def rcon_config_source_label(config: Dict[str, Any]) -> str:
     """Human-friendly label for template use."""
     source = config.get("source")
-    if source == "env":
-        return "Environment (.env)"
     if source == "db":
-        return "Saved in app (DB)"
-    return "Defaults"
+        return "Saved in Database"
+    return "Not Configured"

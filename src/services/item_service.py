@@ -1,5 +1,6 @@
 """Item usage tracking service."""
 from collections import OrderedDict
+from typing import Optional
 from src.database import get_db
 from src.commands import ITEMS
 
@@ -12,8 +13,8 @@ ITEM_INDEX = {
 }
 
 
-def record_item_usage(item_name, amount=1):
-    """Persist item usage counts for quick-access ordering."""
+def record_item_usage(user_id: int, item_name, amount=1):
+    """Persist item usage counts for quick-access ordering for a specific user."""
     if item_name not in ITEM_INDEX:
         return
     try:
@@ -24,21 +25,27 @@ def record_item_usage(item_name, amount=1):
     db = get_db()
     db.execute(
         """
-        INSERT INTO item_usage (item, used_count, last_used)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(item) DO UPDATE SET
+        INSERT INTO item_usage (item, user_id, used_count, last_used)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(item, user_id) DO UPDATE SET
             used_count = item_usage.used_count + excluded.used_count,
             last_used = CURRENT_TIMESTAMP
         """,
-        (item_name, amount_int),
+        (item_name, user_id, amount_int),
     )
     db.commit()
 
 
-def fetch_usage_counts():
-    """Get usage counts for all items."""
+def fetch_usage_counts(user_id: Optional[int] = None):
+    """Get usage counts for all items for a specific user."""
+    if user_id is None:
+        return {}
+        
     db = get_db()
-    rows = db.execute("SELECT item, used_count FROM item_usage").fetchall()
+    rows = db.execute(
+        "SELECT item, used_count FROM item_usage WHERE user_id = ?", 
+        (user_id,)
+    ).fetchall()
     return {row["item"]: row["used_count"] for row in rows}
 
 
@@ -55,9 +62,9 @@ def get_top_used_items(usage_counts, limit=8):
     return top
 
 
-def build_item_catalog():
-    """Return ordered item categories with optional usage data."""
-    usage_counts = fetch_usage_counts()
+def build_item_catalog(user_id: Optional[int] = None):
+    """Return ordered item categories with optional usage data for a specific user."""
+    usage_counts = fetch_usage_counts(user_id)
     catalog = OrderedDict()
 
     top_items = get_top_used_items(usage_counts)
@@ -75,8 +82,8 @@ def build_item_catalog():
     return catalog
 
 
-def delete_item_usage(item_name):
-    """Delete usage record for an item."""
+def delete_item_usage(user_id: int, item_name):
+    """Delete usage record for an item for a specific user."""
     db = get_db()
-    db.execute("DELETE FROM item_usage WHERE item = ?", (item_name,))
+    db.execute("DELETE FROM item_usage WHERE item = ? AND user_id = ?", (item_name, user_id))
     db.commit()

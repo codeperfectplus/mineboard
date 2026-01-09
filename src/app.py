@@ -6,8 +6,8 @@ from src.database import get_db, close_db, init_db
 from src.services.location_service import seed_locations_if_empty
 from src.models import User
 
-# Create Flask app
-app = Flask(__name__)
+# Create Flask app with assets served from /static
+app = Flask(__name__, static_folder="assets", static_url_path="/static")
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 
 # Setup Flask-Login
@@ -17,7 +17,11 @@ login_manager.login_view = 'auth.login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    user = User.get(user_id)
+    if user:
+        # Seed default locations for new users
+        seed_locations_if_empty(user.id)
+    return user
 
 # Register database teardown
 app.teardown_appcontext(close_db)
@@ -25,7 +29,6 @@ app.teardown_appcontext(close_db)
 # Initialize database
 with app.app_context():
     init_db()
-    seed_locations_if_empty()
 
 # Register blueprints
 from src.routes.main_routes import main_bp

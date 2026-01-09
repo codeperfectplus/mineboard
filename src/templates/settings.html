@@ -93,33 +93,26 @@
                     <div class="flex justify-between"><span class="text-gray-400">Password set</span><span class="text-white font-mono">{{ 'Yes' if rcon_config.password else 'No' }}</span></div>
                 </div>
 
-                {% if current_user.role == 'admin' %}
-                    {% if rcon_config.source == 'env' %}
-                        <div class="mt-4 bg-amber-900/30 border border-amber-600/40 p-4 rounded text-amber-200 text-sm">
-                            RCON values are currently managed via your .env file. Update the container environment to change them.
-                        </div>
-                    {% else %}
-                        <form action="{{ url_for('main.update_rcon_config') }}" method="POST" class="mt-4 space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="text-sm text-gray-300">Host
-                                    <input type="text" name="host" value="{{ rcon_config.host }}" class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm mt-1" required>
-                                </label>
-                                <label class="text-sm text-gray-300">Port
-                                    <input type="number" name="port" value="{{ rcon_config.port }}" class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm mt-1" required>
-                                </label>
-                            </div>
-                            <label class="text-sm text-gray-300 block">Password
-                                <input type="password" name="password" value="{{ rcon_config.password }}" class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm mt-1" required>
-                            </label>
-                            <p class="text-xs text-gray-400">Values are stored securely in the app database when .env does not provide them.</p>
-                            <button type="submit" class="mc-button bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white px-4 py-2 text-sm font-semibold">Save RCON Settings</button>
-                        </form>
-                    {% endif %}
-                {% else %}
-                    <div class="mt-4 bg-gray-800/60 border border-white/10 p-4 rounded text-gray-300 text-sm">
-                        Only admins can update RCON connection settings.
+                <form action="{{ url_for('main.update_rcon_config') }}" method="POST" class="mt-4 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="text-sm text-gray-300">Host
+                            <input type="text" name="host" value="{{ rcon_config.host }}" placeholder="localhost or server IP" class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm mt-1" required>
+                        </label>
+                        <label class="text-sm text-gray-300">Port
+                            <input type="number" name="port" value="{{ rcon_config.port }}" placeholder="25575" class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm mt-1" required>
+                        </label>
                     </div>
-                {% endif %}
+                    <label class="text-sm text-gray-300 block">Password
+                        <input type="password" name="password" value="{{ rcon_config.password }}" placeholder="Your RCON password" class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm mt-1" required>
+                    </label>
+                    <div class="bg-blue-900/20 border border-blue-500/30 p-3 rounded text-xs text-blue-200">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Your server connection settings are stored securely and isolated from other users. Each user can connect to their own Minecraft server.
+                    </div>
+                    <button type="submit" class="mc-button bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white px-4 py-2 text-sm font-semibold w-full">
+                        <i class="fas fa-save mr-2"></i>Save Server Settings
+                    </button>
+                </form>
             </div>
 
             <!-- Application Info -->

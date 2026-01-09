@@ -1,20 +1,25 @@
 """Location management service."""
+from typing import Optional
 from src.database import get_db
 from src.config_loader import load_json_config
 
 
-def seed_locations_if_empty():
-    """Seed locations from config if database is empty."""
+def seed_locations_if_empty(user_id: Optional[int] = None):
+    """Seed locations from config for a user if database is empty for that user."""
+    if user_id is None:
+        return
+        
     db = get_db()
-    count = db.execute("SELECT COUNT(*) FROM locations").fetchone()[0]
+    count = db.execute("SELECT COUNT(*) FROM locations WHERE user_id = ?", (user_id,)).fetchone()[0]
     if count == 0:
         seed = load_json_config('locations.json').get('locations', [])
         for loc in seed:
             coords = loc.get('coordinates', {})
             db.execute(
-                "INSERT OR REPLACE INTO locations (id, name, icon, description, x, y, z) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO locations (id, user_id, name, icon, description, x, y, z) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     loc.get('id'),
+                    user_id,
                     loc.get('name'),
                     loc.get('icon', 'map-marker-alt'),
                     loc.get('description', ''),
@@ -26,11 +31,15 @@ def seed_locations_if_empty():
         db.commit()
 
 
-def fetch_locations():
-    """Get all locations from database."""
+def fetch_locations(user_id: Optional[int] = None):
+    """Get all locations from database for a specific user."""
+    if user_id is None:
+        return []
+        
     db = get_db()
     rows = db.execute(
-        "SELECT id, name, icon, description, x, y, z FROM locations ORDER BY name"
+        "SELECT id, name, icon, description, x, y, z FROM locations WHERE user_id = ? ORDER BY name",
+        (user_id,)
     ).fetchall()
     return [
         {
@@ -44,13 +53,14 @@ def fetch_locations():
     ]
 
 
-def upsert_location(data):
-    """Create or update a location."""
+def upsert_location(user_id: int, data):
+    """Create or update a location for a specific user."""
     db = get_db()
     db.execute(
-        "INSERT OR REPLACE INTO locations (id, name, icon, description, x, y, z) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO locations (id, user_id, name, icon, description, x, y, z) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             data["id"],
+            user_id,
             data["name"],
             data.get("icon", "map-marker-alt"),
             data.get("description", ""),
@@ -62,8 +72,8 @@ def upsert_location(data):
     db.commit()
 
 
-def delete_location(loc_id):
-    """Delete a location by ID."""
+def delete_location(user_id: int, loc_id):
+    """Delete a location by ID for a specific user."""
     db = get_db()
-    db.execute("DELETE FROM locations WHERE id = ?", (loc_id,))
+    db.execute("DELETE FROM locations WHERE id = ? AND user_id = ?", (loc_id, user_id))
     db.commit()
