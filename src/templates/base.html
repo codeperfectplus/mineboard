@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Minecraft Server Control{% endblock %}</title>
+    <title>{% block title %}Mineboard - Minecraft Server Control{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -226,11 +226,11 @@
                 <div class="flex items-center gap-4">
                     <div class="flex items-center gap-3">
                         <div class="block-icon bg-black/40 border border-white/10">
-                            <img src="{{ url_for('static', filename='logo/SmallLogo.png') }}" alt="Minecraft Server Logo" class="w-10 h-10 object-contain" loading="lazy">
+                            <img src="{{ url_for('static', filename='logo/SmallLogo.png') }}" alt="Mineboard Logo" class="w-10 h-10 object-contain" loading="lazy">
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold text-white">Minecraft Server</h1>
-                            <p class="text-xs text-gray-400">Admin Control Panel</p>
+                            <h1 class="text-xl md:text-2xl font-bold text-white pixel-font" style="font-size: 1rem; line-height: 1.5;">Mineboard</h1>
+                            <p class="text-xs text-gray-400">Server Control Panel</p>
                         </div>
                     </div>
                 </div>
@@ -325,12 +325,16 @@
 
     <!-- Footer -->
     <footer class="relative z-10 mt-16 mb-8 text-center text-gray-500">
-        <div class="mc-card inline-block px-6 py-3">
-            <p class="text-sm">
+        <div class="mc-card inline-block px-6 py-4">
+            <p class="text-sm mb-2">
                 <i class="fas fa-cube text-emerald-400 mr-2"></i>
-                Minecraft Server Control Panel
+                <span class="font-semibold text-gray-400">Mineboard</span> - Server Control Panel
                 <i class="fas fa-heart text-red-400 mx-2"></i>
                 Powered by RCON
+            </p>
+            <p class="text-xs text-gray-600 italic">
+                <i class="fas fa-info-circle mr-1"></i>
+                Not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Studios.
             </p>
         </div>
     </footer>

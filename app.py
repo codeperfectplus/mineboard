@@ -1,4 +1,4 @@
-"""Flask application for Minecraft Server Control."""
+"""Mineboard - Flask application for Minecraft Server Control."""
 import os
 from flask import Flask
 from flask_login import LoginManager
