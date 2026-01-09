@@ -23,9 +23,13 @@ _pool_lock = threading.Lock()
 def _connect_new(user_id: Optional[int] = None):
     """Create and connect a new RCON client for a specific user."""
     cfg = get_rcon_config(user_id)
-    client = MCRcon(cfg["host"], cfg["password"], port=cfg["port"])
-    client.connect()
-    return client
+    client = MCRcon(cfg["host"], cfg["password"], port=cfg["port"], timeout=3)
+    try:
+        client.connect()
+        return client
+    except (socket.timeout, ConnectionRefusedError, OSError) as e:
+        # Fail fast - don't block the application
+        raise ConnectionError(f"Failed to connect to RCON server at {cfg['host']}:{cfg['port']}") from e
 
 
 def _get_client(user_id: Optional[int] = None):
@@ -49,12 +53,22 @@ def run_command(command: str, user_id: Optional[int] = None):
     try:
         client = _get_client(user_id)
         return client.command(command)
-    except (socket.timeout, ConnectionRefusedError) as conn_err:
-        return "Error: Connection timed out. Is the Minecraft server running?" if isinstance(conn_err, socket.timeout) else "Error: Connection refused. Make sure Minecraft server is running and RCON is enabled."
+    except ConnectionError:
+        return "Error: Cannot connect to RCON server. Please configure RCON settings in the Settings page."
+    except (socket.timeout, ConnectionRefusedError, OSError) as conn_err:
+        cache_key = user_id if user_id is not None else "default"
+        with _pool_lock:
+            _client_pool[cache_key] = None
+        if isinstance(conn_err, socket.timeout):
+            return "Error: Connection timed out. Is the Minecraft server running?"
+        return "Error: Connection refused. Make sure Minecraft server is running and RCON is enabled."
     except Exception as e:
         error_msg = str(e)
         if "Authentication failed" in error_msg or "Login failed" in error_msg:
-            return "Error: Authentication failed. Check RCON password in settings or .env file."
+            cache_key = user_id if user_id is not None else "default"
+            with _pool_lock:
+                _client_pool[cache_key] = None
+            return "Error: Authentication failed. Check RCON password in settings."
 
         # Attempt one reconnect+retry on a broken pipe/socket closure
         try:
@@ -67,6 +81,10 @@ def run_command(command: str, user_id: Optional[int] = None):
                     pass
                 _client_pool[cache_key] = _connect_new(user_id)
                 return _client_pool[cache_key].command(command)
+        except (ConnectionError, socket.timeout, ConnectionRefusedError, OSError):
+            with _pool_lock:
+                _client_pool[cache_key] = None
+            return "Error: Cannot connect to RCON server. Please check your settings."
         except Exception:
             return f"Error: {error_msg}"
 
@@ -122,8 +140,8 @@ def get_online_players(user_id: Optional[int] = None):
     try:
         response = run_command("list", user_id)
         # Parse response like "There are 2 of a max of 20 players online: player1, player2"
-        if "Error" in response:
-            print(f"RCON Error: {response}")
+        if "Error" in response or not response:
+            # Return empty list silently - don't block UI
             return []
         if "online:" in response:
             players_str = response.split("online:")[1].strip()
@@ -131,5 +149,5 @@ def get_online_players(user_id: Optional[int] = None):
                 return [p.strip() for p in players_str.split(",")]
         return []
     except Exception as e:
-        print(f"Exception getting players: {e}")
+        # Fail gracefully - don't block the application
         return []

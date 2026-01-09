@@ -1,5 +1,5 @@
 services:
-  web:
+  mineboard:
     build:
       context: .
       dockerfile: Dockerfile
@@ -11,4 +11,10 @@ services:
     volumes:
       - /mnt/data/self-host/minecraft-control:/app/data
     restart: unless-stopped
-    command: ["gunicorn", "--bind", "0.0.0.0:5090", "--chdir", "src", "app:app"]
+    command: ["gunicorn", "--bind", "0.0.0.0:5090", "--timeout", "120", "--preload", "app:app"]
+    networks:
+      - minecraft_network
+
+networks:
+  minecraft_network:
+    external: true

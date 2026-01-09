@@ -7,7 +7,10 @@ from src.services.location_service import seed_locations_if_empty
 from src.models import User
 
 # Create Flask app with assets served from /static
-app = Flask(__name__, static_folder="assets", static_url_path="/static")
+app = Flask(__name__, 
+            template_folder="src/templates",
+            static_folder="src/assets", 
+            static_url_path="/static")
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 
 # Setup Flask-Login
