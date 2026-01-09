@@ -94,7 +94,7 @@ Before setting up Mineboard, ensure you have:
 Download and install Mineboard with a single command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/codeperfectplus/mineboard/refs/heads/main/deploy-native.sh | sudo bash -s -- --install
+curl -fsSL https://codeperfectplus.github.io/mineboard/install.sh | bash
 ```
 
 This will automatically:
