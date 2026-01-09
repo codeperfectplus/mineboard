@@ -71,7 +71,7 @@ def update_rcon_config():
     save_rcon_config(user_id, host, port_val, password)
     reset_rcon_client(user_id)
     flash("RCON settings saved. New connections will use these values.")
-    return redirect(url_for('main.settings'))
+    return redirect(url_for('main.settings', test_connection='true'))
 
 
 @main_bp.route('/error-logs')

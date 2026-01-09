@@ -339,6 +339,17 @@
     window.addEventListener('load', () => {
         loadServerInfo();
         loadAppInfo();
+        
+        // Auto-run connection test if settings were just saved
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('test_connection') === 'true') {
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+                testConnection();
+                // Clean URL by removing the parameter
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }, 500);
+        }
     });
 </script>
 {% endblock %}
