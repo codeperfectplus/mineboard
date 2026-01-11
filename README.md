@@ -7,83 +7,17 @@
 
 > **Disclaimer:** Mineboard is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Studios.
 
-## ✨ Features
+## Demo UI on AWS
 
-### 🎮 Player Management
-- **Real-time Player Tracking** - View online players with auto-refresh every 10 seconds
-- **Teleportation System** - Quick teleport players to each other or saved locations
-- **Coordinate Teleport** - Send players to specific X, Y, Z coordinates
-- **Player Statistics** - View detailed stats (deaths, kills, playtime, etc.) via API
-- **Whitelist & OP Management** - Add/remove players from whitelist and operator lists
+A demo instance of Mineboard is available at:
 
-### 📦 Item & Kit Management
-- **Predefined Kits** - Starter, Tools, Diamond Armor, Netherite, Building, Farming, Redstone kits
-- **Custom Item Giving** - Give any Minecraft item with custom amounts to players
-- **Visual Item Selection** - Browse items with icons and search functionality
-- **Enchantment Support** - Give enchanted items with specific enchantments
+**URL:** [http://13.203.200.99:5090/](http://13.203.200.99:5090/)
 
-### 🗺️ Location Management
-- **Save Locations** - Store important coordinates with names and descriptions
-- **Quick Teleport** - One-click teleport to saved locations
-- **Locate Structures** - Find villages, strongholds, temples, and other structures
-- **Persistent Storage** - All locations saved in SQLite database per user
+**Login Credentials:**
+- **Username:** user
+- **Password:** user
 
-### ⚙️ Server Controls
-- **Quick Commands** - One-click access to common server operations
-  - Weather control (clear/rain/thunder)
-  - Time control (day/night/noon/midnight)
-  - Game rules (PVP, keepInventory, doMobSpawning, etc.)
-- **Custom Commands** - Execute any RCON command directly
-- **Batch Operations** - Execute multiple commands at once
-
-### 👥 Multi-Tenant & Multi-User System
-- **Multi-Tenant Architecture** - Each user connects to their own Minecraft server
-- **Individual RCON Configuration** - Per-user server connection settings
-- **User Authentication** - Secure login system with Flask-Login
-- **Role-Based Access** - Admin and regular user roles
-- **User Management** - Admin panel to create/manage users
-- **Isolated User Data** - Each user has their own saved locations and settings
-
-### 🎨 Modern UI/UX
-- **Minecraft-Themed Design** - Pixel fonts and block-style elements
-- **5 Theme Modes** - Grass Plains, Desert, Ocean, Nether, The End
-- **Responsive Design** - Works on desktop, tablet, and mobile
-- **Dark Mode** - Easy on the eyes with beautiful gradients
-- **Real-time Notifications** - Toast notifications for all actions
-
-### 🛠️ Technical Features
-- **Multi-Tenant Support** - Multiple users managing separate servers
-- **Per-User RCON Connections** - Each user maintains their own server connection
-- **RESTful API** - JSON endpoints for all operations
-- **Error Logging** - Track and view RCON command errors
-- **Docker Support** - Easy deployment with Docker Compose
-- **RCON Connection Pool** - Efficient connection reuse per user
-- **Diagnostics Page** - Test connectivity and view server status
-
-## 🚀 Upcoming Features
-
-- [ ] **Command Scheduling** - Schedule commands to run at specific times
-- [ ] **Backup Management** - Automated world backup and restore
-- [ ] **Plugin Integration** - Support for popular server plugins
-- [ ] **Advanced Permissions** - Fine-grained permission system
-- [ ] **Player Activity Dashboard** - Charts and graphs for player activity
-- [ ] **Multi-Server per User** - Allow one user to manage multiple servers
-- [ ] **Discord Integration** - Link commands and notifications to Discord
-- [ ] **Web Console** - Real-time server console in the browser
-- [ ] **Economy System** - Virtual currency and shop integration
-- [ ] **Ban Management** - Ban/unban players with reasons and durations
-- [ ] **World Management** - Switch between worlds/dimensions
-- [ ] **Performance Metrics** - TPS, RAM, CPU usage monitoring
-- [ ] **Custom Kit Builder** - Create and edit kits via UI
-- [ ] **Audit Logs** - Track all admin actions with timestamps
-
-## 📋 Prerequisites
-
-Before setting up Mineboard, ensure you have:
-- A running Minecraft server with RCON enabled
-- RCON port accessible from where Mineboard is hosted
-
-**Don't have a Minecraft server?** Check out our [Minecraft Server Setup Guide](minecraft_server/README.md) for a quick Docker-based server deployment.
+Feel free to explore the UI and its features. For any issues or feedback, please contact the project maintainer.
 
 ## 🚀 Installation & Setup
 
@@ -162,7 +96,83 @@ http://localhost:5090
 4. **Click "Test Connection"** button to verify connectivity
 5. **Save Configuration** once the test succeeds
 
-**✅ That's it!** Each user can configure their own server connection in the Settings page.
+## ✨ Features
+
+### 🎮 Player Management
+- **Real-time Player Tracking** - View online players with auto-refresh every 10 seconds
+- **Teleportation System** - Quick teleport players to each other or saved locations
+- **Coordinate Teleport** - Send players to specific X, Y, Z coordinates
+- **Player Statistics** - View detailed stats (deaths, kills, playtime, etc.) via API
+- **Whitelist & OP Management** - Add/remove players from whitelist and operator lists
+
+### 📦 Item & Kit Management
+- **Predefined Kits** - Starter, Tools, Diamond Armor, Netherite, Building, Farming, Redstone kits
+- **Custom Item Giving** - Give any Minecraft item with custom amounts to players
+- **Visual Item Selection** - Browse items with icons and search functionality
+- **Enchantment Support** - Give enchanted items with specific enchantments
+
+### 🗺️ Location Management
+- **Save Locations** - Store important coordinates with names and descriptions
+- **Quick Teleport** - One-click teleport to saved locations
+- **Locate Structures** - Find villages, strongholds, temples, and other structures
+- **Persistent Storage** - All locations saved in SQLite database per user
+
+### ⚙️ Server Controls
+- **Quick Commands** - One-click access to common server operations
+  - Weather control (clear/rain/thunder)
+  - Time control (day/night/noon/midnight)
+  - Game rules (PVP, keepInventory, doMobSpawning, etc.)
+- **Custom Commands** - Execute any RCON command directly
+- **Batch Operations** - Execute multiple commands at once
+
+### 👥 Multi-Tenant & Multi-User System
+- **Multi-Tenant Architecture** - Each user connects to their own Minecraft server
+- **Individual RCON Configuration** - Per-user server connection settings
+- **User Authentication** - Secure login system with Flask-Login
+- **Role-Based Access** - Admin and regular user roles
+- **User Management** - Admin panel to create/manage users
+- **Isolated User Data** - Each user has their own saved locations and settings
+
+### 🎨 Modern UI/UX
+- **Minecraft-Themed Design** - Pixel fonts and block-style elements
+- **5 Theme Modes** - Grass Plains, Desert, Ocean, Nether, The End
+- **Responsive Design** - Works on desktop, tablet, and mobile
+- **Dark Mode** - Easy on the eyes with beautiful gradients
+- **Real-time Notifications** - Toast notifications for all actions
+
+### 🛠️ Technical Features
+- **Multi-Tenant Support** - Multiple users managing separate servers
+- **Per-User RCON Connections** - Each user maintains their own server connection
+- **RESTful API** - JSON endpoints for all operations
+- **Error Logging** - Track and view RCON command errors
+- **Docker Support** - Easy deployment with Docker Compose
+- **RCON Connection Pool** - Efficient connection reuse per user
+- **Diagnostics Page** - Test connectivity and view server status
+
+## 🚀 Upcoming Features
+
+- [ ] **Command Scheduling** - Schedule commands to run at specific times
+- [ ] **Backup Management** - Automated world backup and restore
+- [ ] **Plugin Integration** - Support for popular server plugins
+- [ ] **Advanced Permissions** - Fine-grained permission system
+- [ ] **Player Activity Dashboard** - Charts and graphs for player activity
+- [ ] **Multi-Server per User** - Allow one user to manage multiple servers
+- [ ] **Discord Integration** - Link commands and notifications to Discord
+- [ ] **Web Console** - Real-time server console in the browser
+- [ ] **Economy System** - Virtual currency and shop integration
+- [ ] **Ban Management** - Ban/unban players with reasons and durations
+- [ ] **World Management** - Switch between worlds/dimensions
+- [ ] **Performance Metrics** - TPS, RAM, CPU usage monitoring
+- [ ] **Custom Kit Builder** - Create and edit kits via UI
+- [ ] **Audit Logs** - Track all admin actions with timestamps
+
+## 📋 Prerequisites
+
+Before setting up Mineboard, ensure you have:
+- A running Minecraft server with RCON enabled
+- RCON port accessible from where Mineboard is hosted
+
+**Don't have a Minecraft server?** Check out our [Minecraft Server Setup Guide](minecraft_server/README.md) for a quick Docker-based server deployment.
 
 ## 🔧 High-Level Architecture
 - **Flask App** - Exposes UI + RESTful JSON endpoints
