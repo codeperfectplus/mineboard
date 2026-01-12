@@ -11,7 +11,7 @@
 
 A demo instance of Mineboard is available at:
 
-**URL:** [http://13.203.200.99:5090/](http://13.203.200.99:5090/)
+**URL:** [http://ec2-13-203-200-99.ap-south-1.compute.amazonaws.com ](http://ec2-13-203-200-99.ap-south-1.compute.amazonaws.com:5090/)
 
 **Login Credentials:**
 - **Username:** user
