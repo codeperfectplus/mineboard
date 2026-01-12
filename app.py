@@ -61,11 +61,13 @@ from src.routes.main_routes import main_bp
 from src.routes.auth_routes import auth_bp
 from src.routes.api_routes import api_bp
 from src.routes.command_routes import command_bp
+from src.routes.chat_routes import chat_bp
 
 app.register_blueprint(main_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(command_bp)
+app.register_blueprint(chat_bp)
 
 
 if __name__ == "__main__":

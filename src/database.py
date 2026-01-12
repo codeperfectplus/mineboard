@@ -9,8 +9,10 @@ from werkzeug.security import generate_password_hash
 # Otherwise use /app/data for Docker compatibility
 if os.getcwd().startswith('/opt/mineboard'):
     DEFAULT_DB_PATH = "/opt/mineboard/data/data.db"
-else:
+if os.getcwd().startswith('/app'):
     DEFAULT_DB_PATH = "/app/data/data.db"
+else:
+    DEFAULT_DB_PATH = "./data/data.db"
 
 # Allow overriding DB path via env so container volume mounts can control location
 DB_PATH = os.environ.get("DB_PATH", DEFAULT_DB_PATH)
@@ -109,7 +111,70 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT DEFAULT 'user'
+            role TEXT DEFAULT 'user',
+            first_name TEXT,
+            last_name TEXT,
+            gamer_tag TEXT
+        )
+        """
+    )
+
+    # Check for missing columns in users table (migration for existing dbs)
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN first_name TEXT")
+    except sqlite3.OperationalError:
+        pass # Column likely exists
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN last_name TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN gamer_tag TEXT")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Create messages table
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER NOT NULL,
+            recipient_id INTEGER, -- Null if group chat
+            group_id INTEGER, -- Null if 1-on-1 chat
+            content TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            read BOOLEAN DEFAULT 0,
+            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (group_id) REFERENCES chat_groups(id) ON DELETE CASCADE
+        )
+        """
+    )
+    
+    # Create chat groups table
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+        )
+        """
+    )
+    
+    # Create group members table
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS group_members (
+            group_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES chat_groups(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            PRIMARY KEY (group_id, user_id)
         )
         """
     )
@@ -121,8 +186,14 @@ def init_db():
         admin_password = os.environ.get("ADMIN_PASSWORD", "admin")
         print(f"Creating initial admin user: {admin_username}")
         db.execute(
-            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-            (admin_username, generate_password_hash(admin_password), 'admin')
+            "INSERT INTO users (username, password_hash, role, first_name, last_name, gamer_tag) VALUES (?, ?, ?, ?, ?, ?)",
+            (admin_username, generate_password_hash(admin_password), 'admin', 'System', 'Admin', 'Operator')
         )
+        
+    # Check for missing last_read_at in group_members (migration)
+    try:
+        db.execute("ALTER TABLE group_members ADD COLUMN last_read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    except sqlite3.OperationalError:
+        pass
     
     db.commit()

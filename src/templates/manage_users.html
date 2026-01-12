@@ -12,13 +12,13 @@
     </div>
 
     {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="bg-blue-500/20 border border-blue-500 text-blue-100 px-4 py-2 rounded mb-4">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
+    {% if messages %}
+    {% for message in messages %}
+    <div class="bg-blue-500/20 border border-blue-500 text-blue-100 px-4 py-2 rounded mb-4">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
     {% endwith %}
 
     <!-- Create User Form -->
@@ -26,19 +26,19 @@
         <h2 class="text-lg font-bold text-white mb-4">Create New User</h2>
         <form method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <input type="hidden" name="action" value="create">
-            
+
             <div class="md:col-span-1">
                 <label class="block text-gray-300 text-xs uppercase mb-1">Username</label>
-                <input type="text" name="username" required 
-                       class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
+                <input type="text" name="username" required
+                    class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
             </div>
-            
+
             <div class="md:col-span-1">
                 <label class="block text-gray-300 text-xs uppercase mb-1">Password</label>
-                <input type="password" name="password" required 
-                       class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
+                <input type="password" name="password" required
+                    class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
             </div>
-            
+
             <div class="md:col-span-1">
                 <label class="block text-gray-300 text-xs uppercase mb-1">Role</label>
                 <select name="role" class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
@@ -46,9 +46,30 @@
                     <option value="admin">Admin</option>
                 </select>
             </div>
-            
+
             <div class="md:col-span-1">
-                <button type="submit" class="mc-button w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 text-sm">
+                <label class="block text-gray-300 text-xs uppercase mb-1">First Name</label>
+                <input type="text" name="first_name"
+                    class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
+            </div>
+
+            <div class="md:col-span-1">
+                <label class="block text-gray-300 text-xs uppercase mb-1">Last Name</label>
+                <input type="text" name="last_name"
+                    class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm">
+            </div>
+
+            <div class="md:col-span-1">
+                <label class="block text-gray-300 text-xs uppercase mb-1">Gamer Tag</label>
+                <div class="relative">
+                    <input type="text" name="gamer_tag" placeholder="Auto-generated if empty"
+                        class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm placeholder-gray-500">
+                </div>
+            </div>
+
+            <div class="md:col-span-1">
+                <button type="submit"
+                    class="mc-button w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 text-sm">
                     <i class="fas fa-plus mr-2"></i>Create User
                 </button>
             </div>
@@ -74,7 +95,8 @@
                         <td class="p-2">{{ user.id }}</td>
                         <td class="p-2 font-bold text-white">{{ user.username }}</td>
                         <td class="p-2">
-                            <span class="px-2 py-1 rounded text-xs {{ 'bg-purple-500/20 text-purple-200' if user.role == 'admin' else 'bg-blue-500/20 text-blue-200' }}">
+                            <span
+                                class="px-2 py-1 rounded text-xs {{ 'bg-purple-500/20 text-purple-200' if user.role == 'admin' else 'bg-blue-500/20 text-blue-200' }}">
                                 {{ user.role }}
                             </span>
                         </td>

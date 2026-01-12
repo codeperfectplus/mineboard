@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - Mineboard{% endblock %}
+
+{% block content %}
+<div class="h-[calc(100vh-12rem)] flex gap-4">
+    <!-- Sidebar -->
+    <div class="w-80 flex-shrink-0 flex flex-col gap-4">
+        <!-- Search/Discover -->
+        <div class="mc-card p-3">
+            <h3 class="text-gray-400 text-xs uppercase font-bold mb-2 px-2">Discover</h3>
+            <div id="usersList" class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                <!-- Users injected here -->
+                <div class="text-center text-gray-500 text-sm py-2">Loading users...</div>
+            </div>
+        </div>
+
+        <!-- Groups -->
+        <div class="mc-card p-3 flex-1 flex flex-col min-h-0">
+            <div class="flex justify-between items-center mb-2 px-2">
+                <h3 class="text-gray-400 text-xs uppercase font-bold">Groups</h3>
+                <button onclick="openCreateGroupModal()"
+                    class="text-emerald-400 hover:text-emerald-300 text-xs font-bold">
+                    <i class="fas fa-plus"></i> NEW
+                </button>
+            </div>
+            <div id="groupsList" class="space-y-1 overflow-y-auto custom-scrollbar flex-1">
+                <!-- Groups injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="flex-1 mc-card flex flex-col min-w-0">
+        <!-- Chat Header -->
+        <div class="p-4 border-b border-gray-700/50 bg-black/20 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded bg-gradient-to-br from-emerald-600 to-emerald-800 flex items-center justify-center text-white font-bold text-lg shadow-inner"
+                    id="chatAvatar">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div>
+                    <h2 class="text-white font-bold text-lg leading-tight" id="chatTitle">Select a chat</h2>
+                    <p class="text-gray-400 text-xs" id="chatSubtitle">start messaging</p>
+                </div>
+            </div>
+            <div id="chatActions" class="hidden flex items-center gap-2">
+                <button onclick="showChatInfo()"
+                    class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 transition-colors">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Add People</span>
+                </button>
+                <button onclick="showChatInfo()" class="text-gray-400 hover:text-white p-2">
+                    <i class="fas fa-info-circle text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div id="messagesArea" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/10">
+            <div class="h-full flex flex-col items-center justify-center text-gray-500 opacity-50">
+                <i class="fas fa-comments text-6xl mb-4"></i>
+                <p>Select a user or group to start chatting</p>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 bg-black/20 border-t border-gray-700/50">
+            <form id="messageForm" class="flex gap-2" onsubmit="sendMessage(event)">
+                <input type="text" id="messageInput"
+                    class="flex-1 bg-gray-900/50 border border-gray-700 text-white px-4 py-3 rounded focus:outline-none focus:border-emerald-500 transition-colors placeholder-gray-500"
+                    placeholder="Type a message..." disabled>
+                <button type="submit" id="sendButton"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 rounded font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Group Info Modal -->
+<div id="groupInfoModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+    <div class="mc-card w-full max-w-md p-6 relative">
+        <button onclick="closeGroupInfo()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center text-sm font-bold text-white">
+                <i class="fas fa-users"></i>
+            </div>
+            <span id="groupInfoName">Group Name</span>
+        </h2>
+
+        <div class="mb-6">
+            <h3 class="text-gray-400 text-xs uppercase font-bold mb-2">Members</h3>
+            <div id="groupMembersList"
+                class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar bg-black/20 rounded p-2">
+                <!-- Members injected here -->
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-gray-400 text-xs uppercase font-bold mb-2">Add Member</h3>
+            <div class="flex gap-2">
+                <select id="addMemberSelect"
+                    class="flex-1 bg-gray-900 border border-gray-700 text-white px-3 py-2 rounded focus:outline-none focus:border-emerald-500 text-sm">
+                    <option value="">Select user...</option>
+                </select>
+                <button onclick="addMember()"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded font-bold text-sm transition-colors">
+                    Add
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Group Modal -->
+<div id="createGroupModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+    <div class="mc-card w-full max-w-md p-6 relative">
+        <button onclick="closeCreateGroupModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <h2 class="text-xl font-bold text-white mb-6">Create New Group</h2>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-gray-300 text-xs uppercase mb-1">Group Name</label>
+                <input type="text" id="newGroupName" placeholder="e.g. Space Team"
+                    class="w-full bg-black/30 border border-white/10 rounded p-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div>
+                <label class="block text-gray-300 text-xs uppercase mb-1">Add Members</label>
+                <div class="max-h-48 overflow-y-auto custom-scrollbar bg-black/20 rounded p-2 space-y-1"
+                    id="createGroupUsersList">
+                    <!-- Checkboxes injected here -->
+                    <div class="text-center text-gray-500 text-xs">Loading users...</div>
+                </div>
+            </div>
+
+            <button onclick="submitCreateGroup()"
+                class="mc-button w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 font-bold text-sm mt-4">
+                Create Group
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+    let currentTargetId = null;
+    let isGroupChat = false;
+    let currentUser = {{ current_user.id }};
+    let refreshInterval = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadUsers();
+        loadGroups();
+    });
+
+    async function loadUsers() {
+        try {
+            const res = await fetch('/api/chat/users');
+            const data = await res.json();
+            const list = document.getElementById('usersList');
+
+            if (data.users.length === 0) {
+                list.innerHTML = '<div class="text-gray-500 text-xs text-center py-2">No other users found</div>';
+                return;
+            }
+
+            list.innerHTML = data.users.map(u => `
+                <div onclick="selectChat(${u.id}, '${u.username}', '${u.gamer_tag || ''}', false)" 
+                     class="p-2 rounded hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors group">
+                    <div class="w-8 h-8 rounded bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                        ${u.username[0].toUpperCase()}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex justify-between items-center">
+                             <div class="text-gray-200 text-sm font-semibold truncate group-hover:text-white">${u.username}</div>
+                             ${u.unread > 0 ? `<div class="bg-red-500 text-white text-[10px] font-bold px-1.5 rounded-full">${u.unread}</div>` : ''}
+                        </div>
+                        ${u.gamer_tag ? `<div class="text-emerald-500 text-xs truncate">${u.gamer_tag}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error('Failed to load users', e);
+        }
+    }
+
+    async function loadGroups() {
+        try {
+            const res = await fetch('/api/chat/groups');
+            const data = await res.json();
+            const list = document.getElementById('groupsList');
+
+            if (data.groups.length === 0) {
+                list.innerHTML = '<div class="text-gray-500 text-xs text-center py-2">No groups yet</div>';
+                return;
+            }
+
+            list.innerHTML = data.groups.map(g => `
+                <div onclick="selectChat(${g.id}, '${g.name}', '', true)" 
+                     class="p-2 rounded hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors group">
+                     <div class="w-8 h-8 rounded bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="flex-1 flex justify-between items-center min-w-0">
+                        <div class="text-gray-200 text-sm font-semibold truncate group-hover:text-white">${g.name}</div>
+                        ${g.unread > 0 ? `<div class="bg-red-500 text-white text-[10px] font-bold px-1.5 rounded-full">${g.unread}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error('Failed to load groups', e);
+        }
+    }
+
+    function selectChat(id, name, subtitle, isGroup) {
+        if (currentTargetId === id && isGroupChat === isGroup) return;
+
+        currentTargetId = id;
+        isGroupChat = isGroup;
+
+        // UI Updates
+        document.getElementById('chatTitle').textContent = name;
+        document.getElementById('chatSubtitle').textContent = isGroup ? 'Group Chat' : (subtitle || 'Private Chat');
+        document.getElementById('chatAvatar').innerHTML = isGroup ? '<i class="fas fa-users"></i>' : name[0].toUpperCase();
+        document.getElementById('chatAvatar').className = `w-10 h-10 rounded flex items-center justify-center text-white font-bold text-lg shadow-inner ${isGroup ? 'bg-gradient-to-br from-blue-600 to-blue-800' : 'bg-gradient-to-br from-emerald-600 to-emerald-800'}`;
+
+        document.getElementById('messageInput').disabled = false;
+        document.getElementById('messageInput').focus();
+        document.getElementById('sendButton').disabled = false;
+
+        // Load Messages
+        loadMessages();
+        loadMessages();
+        loadUsers(); // Refresh lists to clear unread for this chat
+        loadGroups();
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(() => {
+            loadMessages();
+            loadUsers();
+            loadGroups();
+        }, 3000); // Poll every 3s
+    }
+
+    async function loadMessages() {
+        if (!currentTargetId) return;
+
+        try {
+            const res = await fetch(`/api/chat/messages?target_id=${currentTargetId}&is_group=${isGroupChat}`);
+            const data = await res.json();
+
+            if (data.error) throw new Error(data.error);
+
+            const area = document.getElementById('messagesArea');
+            const wasScrolledToBottom = area.scrollTop + area.clientHeight >= area.scrollHeight - 50;
+
+            if (data.messages.length === 0) {
+                area.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-gray-500 opacity-50">
+                        <i class="fas fa-comments text-4xl mb-2"></i>
+                        <p>No messages yet. Say hello!</p>
+                    </div>`;
+            } else {
+                area.innerHTML = data.messages.map(m => {
+                    const isMe = m.sender_id === currentUser;
+                    return `
+                        <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-4">
+                            <div class="flex items-end gap-2 max-w-[80%] ${isMe ? 'flex-row-reverse' : 'flex-row'}">
+                                ${!isMe && isGroupChat ? `
+                                    <div class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs text-white shrink-0" title="${m.username}">
+                                        ${m.username[0].toUpperCase()}
+                                    </div>
+                                ` : ''}
+                                <div class="${isMe ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-100'} px-4 py-2 rounded-2xl ${isMe ? 'rounded-br-none' : 'rounded-bl-none'} shadow-md">
+                                    <div class="text-xs text-emerald-400 font-bold mb-1">
+                                        ${m.gamer_tag ? `${m.gamer_tag} <span class="text-gray-500 font-normal">(@${m.username})</span>` : m.username}
+                                    </div>
+                                    <div class="text-sm break-words">${escapeHtml(m.content)}</div>
+                                </div>
+                            </div>
+                            <div class="text-[10px] text-gray-500 mt-1 px-2">
+                                ${new Date(m.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (wasScrolledToBottom) {
+                area.scrollTop = area.scrollHeight;
+            }
+        } catch (e) {
+            console.error('Failed to load messages', e);
+        }
+    }
+
+    async function sendMessage(e) {
+        e.preventDefault();
+        const input = document.getElementById('messageInput');
+        const content = input.value.trim();
+
+        if (!content || !currentTargetId) return;
+
+        input.value = ''; // clear immediately
+
+        try {
+            const res = await fetch('/api/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_id: currentTargetId,
+                    is_group: isGroupChat,
+                    content: content
+                })
+            });
+
+            if (res.ok) {
+                loadMessages(); // reload immediately
+                const area = document.getElementById('messagesArea');
+                area.scrollTop = area.scrollHeight;
+            }
+        } catch (e) {
+            console.error('Failed to send', e);
+            input.value = content; // restore on fail
+        }
+    }
+
+    async function openCreateGroupModal() {
+        const modal = document.getElementById('createGroupModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        // Load users for selection
+        const list = document.getElementById('createGroupUsersList');
+        try {
+            const res = await fetch('/api/chat/users');
+            const data = await res.json();
+            list.innerHTML = data.users.map(u => `
+                <label class="flex items-center gap-3 p-2 hover:bg-white/5 rounded cursor-pointer">
+                    <input type="checkbox" value="${u.id}" class="rounded border-gray-600 bg-gray-700 text-emerald-600 focus:ring-emerald-500">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300">
+                            ${u.username[0].toUpperCase()}
+                        </div>
+                        <div class="text-gray-300 text-sm">${u.gamer_tag ? `${u.gamer_tag} (@${u.username})` : u.username}</div>
+                    </div>
+                </label>
+            `).join('');
+        } catch (e) {
+            list.innerHTML = '<div class="text-red-400 text-xs">Failed to load users</div>';
+        }
+    }
+
+    function closeCreateGroupModal() {
+        const modal = document.getElementById('createGroupModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.getElementById('newGroupName').value = '';
+    }
+
+    async function submitCreateGroup() {
+        const nameInput = document.getElementById('newGroupName');
+        const name = nameInput.value.trim();
+        if (!name) return alert('Please enter a group name');
+
+        const checkboxes = document.querySelectorAll('#createGroupUsersList input[type="checkbox"]:checked');
+        const memberIds = Array.from(checkboxes).map(cb => cb.value);
+
+        try {
+            const res = await fetch('/api/chat/groups/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, members: memberIds })
+            });
+
+            if (res.ok) {
+                closeCreateGroupModal();
+                loadGroups();
+            } else {
+                alert('Failed to create group');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Failed to create group');
+        }
+    }
+
+
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+
+<style>
+    /* Custom Scrollbar for Chat */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+</style>
+{% endblock %}

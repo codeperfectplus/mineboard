@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - Mineboard{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-white pixel-font mb-2">My Profile</h1>
+        <p class="text-gray-400">Manage your identity and preferences</p>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="mc-card p-6 md:p-8">
+        <form method="POST" action="{{ url_for('auth.profile') }}">
+
+            <!-- User Info Read-only -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-gray-400 text-sm font-bold mb-2">Username</label>
+                    <div class="mc-button bg-black/20 block w-full px-4 py-3 text-gray-500 cursor-not-allowed">
+                        {{ user.username }}
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-400 text-sm font-bold mb-2">Role</label>
+                    <div
+                        class="mc-button bg-black/20 block w-full px-4 py-3 text-gray-500 cursor-not-allowed uppercase">
+                        {{ user.role }}
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-700 my-6">
+
+            <!-- Editable Fields -->
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="first_name" class="block text-gray-300 text-sm font-bold mb-2">First Name</label>
+                        <input type="text" id="first_name" name="first_name"
+                            value="{{ user.first_name if user.first_name else '' }}"
+                            class="mc-button w-full bg-gray-800 text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder-gray-600"
+                            placeholder="Steve" required>
+                    </div>
+                    <div>
+                        <label for="last_name" class="block text-gray-300 text-sm font-bold mb-2">Last Name</label>
+                        <input type="text" id="last_name" name="last_name"
+                            value="{{ user.last_name if user.last_name else '' }}"
+                            class="mc-button w-full bg-gray-800 text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder-gray-600"
+                            placeholder="Minecraft" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="gamer_tag" class="block text-emerald-400 text-sm font-bold mb-2">
+                        <i class="fas fa-gamepad mr-1"></i> Gamer Tag
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" id="gamer_tag" name="gamer_tag"
+                            value="{{ user.gamer_tag if user.gamer_tag else '' }}"
+                            class="mc-button w-full bg-gray-800 text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder-gray-600"
+                            placeholder="Notch" required>
+                        <button type="button" onclick="generateGamerTag()"
+                            class="mc-button bg-blue-600 hover:bg-blue-500 text-white px-4 font-bold transition-colors"
+                            title="Generate Random Tag">
+                            <i class="fas fa-dice"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">This will be visible to other users in chat.</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-8 flex items-center justify-end gap-4">
+                <a href="{{ url_for('auth.change_password') }}"
+                    class="text-sm text-gray-400 hover:text-white transition-colors">
+                    Change Password
+                </a>
+                <button type="submit"
+                    class="mc-button bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white px-8 py-3 font-bold text-sm">
+                    <i class="fas fa-save mr-2"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function generateGamerTag() {
+        const adjectives = ['Swift', 'Bold', 'Silent', 'Cosmic', 'Wild', 'Neon', 'Pixel', 'Blocky', 'Ender', 'Nether'];
+        const nouns = ['Steve', 'Alex', 'Creeper', 'Miner', 'Crafter', 'Knight', 'Dragon', 'Wolf', 'Ghast', 'Warden'];
+        const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+        const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+        const randomNumber = Math.floor(Math.random() * 1000);
+
+        const tag = `${randomAdjective}${randomNoun}${randomNumber}`;
+        document.getElementById('gamer_tag').value = tag;
+    }
+</script>
+{% endblock %}

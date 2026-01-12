@@ -1,5 +1,5 @@
-"""Authentication routes."""
 import sqlite3
+import random
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -114,14 +114,23 @@ def manage_users():
             username = request.form['username']
             password = request.form['password']
             role = request.form.get('role', 'user')
+            first_name = request.form.get('first_name', '').strip() or None
+            last_name = request.form.get('last_name', '').strip() or None
+            gamer_tag = request.form.get('gamer_tag', '').strip()
+            
+            # Generate random gamer tag if empty
+            if not gamer_tag:
+                adjectives = ['Swift', 'Bold', 'Silent', 'Cosmic', 'Wild', 'Neon', 'Pixel', 'Blocky', 'Ender', 'Nether']
+                nouns = ['Steve', 'Alex', 'Creeper', 'Miner', 'Crafter', 'Knight', 'Dragon', 'Wolf', 'Ghast', 'Warden']
+                gamer_tag = f"{random.choice(adjectives)}{random.choice(nouns)}{random.randint(100, 999)}"
             
             try:
                 db.execute(
-                    "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                    (username, generate_password_hash(password), role)
+                    "INSERT INTO users (username, password_hash, role, first_name, last_name, gamer_tag) VALUES (?, ?, ?, ?, ?, ?)",
+                    (username, generate_password_hash(password), role, first_name, last_name, gamer_tag)
                 )
                 db.commit()
-                flash(f'User {username} created successfully')
+                flash(f'User {username} created successfully with tag {gamer_tag}')
             except sqlite3.IntegrityError:
                 flash(f'Username {username} already exists')
         elif action == 'delete':
@@ -135,3 +144,28 @@ def manage_users():
             
     users = db.execute("SELECT id, username, role FROM users").fetchall()
     return render_template('manage_users.html', users=users)
+
+
+@auth_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    """User profile settings."""
+    if request.method == 'POST':
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        gamer_tag = request.form.get('gamer_tag', '').strip()
+        
+        db = get_db()
+        try:
+            db.execute(
+                "UPDATE users SET first_name = ?, last_name = ?, gamer_tag = ? WHERE id = ?",
+                (first_name, last_name, gamer_tag, current_user.id)
+            )
+            db.commit()
+            flash('Profile updated successfully!', 'success')
+        except Exception as e:
+            flash(f'Error updating profile: {str(e)}', 'error')
+            
+        return redirect(url_for('auth.profile'))
+        
+    return render_template('profile.html', user=current_user)
